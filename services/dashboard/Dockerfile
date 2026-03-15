@@ -31,16 +31,13 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 
 # Copy the compiled binary from the builder stage
-COPY --from=builder /app /bin/app
-
-# Correct ownership
-RUN chown appuser:appgroup /bin/app
+COPY --from=builder --chown=appuser:appgroup /app /bin/app
 
 #run non-root user
 USER appuser
 
 # Expose the application's port
-EXPOSE 8000
+EXPOSE 8081
 
 #healthcheck before finalising stage
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
