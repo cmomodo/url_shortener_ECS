@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Shortener</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    header p { color: #94a3b8; margin-top: 0.5rem; }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #334155;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    /* Shorten form */
+    .shorten-form {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .shorten-form input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .shorten-form input:focus { border-color: #38bdf8; }
+    .shorten-form input::placeholder { color: #475569; }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #0f172a;
+      border-radius: 8px;
+      display: none;
+    }
+    .result.show { display: block; }
+    .result .short-url {
+      font-size: 1.1rem;
+      color: #38bdf8;
+      word-break: break-all;
+      cursor: pointer;
+    }
+    .result .short-url:hover { text-decoration: underline; }
+    .result .original { color: #64748b; font-size: 0.85rem; margin-top: 0.25rem; word-break: break-all; }
+    .result .copied {
+      display: inline-block;
+      color: #4ade80;
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .result .copied.show { opacity: 1; }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    .stat-box {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-box .number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .stat-box .label {
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+
+    /* Lookup */
+    .lookup-form {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .lookup-form input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+    }
+    .lookup-form input:focus { border-color: #818cf8; }
+    .lookup-form input::placeholder { color: #475569; }
+
+    .lookup-result {
+      display: none;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .lookup-result.show { display: block; }
+    .lookup-result .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .lookup-result .stat-row:last-child { border-bottom: none; }
+    .lookup-result .stat-label { color: #64748b; }
+    .lookup-result .stat-value { color: #e2e8f0; font-weight: 600; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: left;
+      padding: 0.75rem;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #334155;
+    }
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #1e293b;
+      font-size: 0.9rem;
+    }
+    tr:last-child td { border-bottom: none; }
+    .url-cell {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .code-cell {
+      color: #818cf8;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .click-count {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #475569;
+    }
+
+    .error {
+      color: #f87171;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 0.25rem;
+      border: 1px solid #334155;
+    }
+    .tab {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      color: #64748b;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      color: #fff;
+    }
+    .tab:hover:not(.active) { color: #e2e8f0; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-green { background: #064e3b; color: #4ade80; }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+      .shorten-form { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>URL Shortener</h1>
+      <p>Shorten links and track analytics</p>
+    </header>
+
+    <div class="tab-bar">
+      <button class="tab active" data-tab="shorten">Shorten</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="lookup">Lookup</button>
+    </div>
+
+    <!-- SHORTEN TAB -->
+    <div id="tab-shorten" class="tab-content active">
+      <div class="card">
+        <h2>Shorten a URL</h2>
+        <form class="shorten-form" id="shortenForm">
+          <input type="url" id="urlInput" placeholder="https://example.com/very-long-url" required>
+          <button type="submit" class="btn" id="shortenBtn">Shorten</button>
+        </form>
+        <div class="result" id="shortenResult">
+          <span class="short-url" id="shortUrl" title="Click to copy"></span>
+          <span class="copied" id="copiedMsg">Copied!</span>
+          <div class="original" id="originalUrl"></div>
+        </div>
+        <div class="error" id="shortenError"></div>
+      </div>
+
+      <div class="card" id="historyCard" style="display:none">
+        <h2>Shortened This Session</h2>
+        <table>
+          <thead>
+            <tr><th>Short Code</th><th>Original URL</th><th>Clicks</th></tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="card">
+        <h2>Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="number" id="totalUrls">-</div>
+            <div class="label">Total URLs</div>
+          </div>
+          <div class="stat-box">
+            <div class="number" id="totalClicks">-</div>
+            <div class="label">Total Clicks</div>
+          </div>
+          <div class="stat-box">
+            <div class="number" id="clicksToday">-</div>
+            <div class="label">Clicks Today</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <h2>Top URLs</h2>
+          <div id="topUrlsContent"><div class="empty-state">Loading...</div></div>
+        </div>
+        <div class="card">
+          <h2>Recent Clicks</h2>
+          <div id="recentContent"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOOKUP TAB -->
+    <div id="tab-lookup" class="tab-content">
+      <div class="card">
+        <h2>Look Up a Short URL</h2>
+        <form class="lookup-form" id="lookupForm">
+          <input type="text" id="lookupInput" placeholder="Enter short code (e.g. a1b2c3d4)">
+          <button type="submit" class="btn">Look Up</button>
+        </form>
+        <div class="lookup-result" id="lookupResult">
+          <div class="stat-row">
+            <span class="stat-label">Short Code</span>
+            <span class="stat-value code-cell" id="lkCode"></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Original URL</span>
+            <span class="stat-value" id="lkUrl" style="max-width:400px;overflow:hidden;text-overflow:ellipsis"></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Clicks</span>
+            <span class="stat-value click-count" id="lkClicks"></span>
+          </div>
+        </div>
+        <div class="error" id="lookupError"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';  // same origin
+    const DASHBOARD = window.location.protocol + '//' + window.location.hostname + ':8081';
+
+    // Session history
+    const history = [];
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'dashboard') loadDashboard();
+      });
+    });
+
+    // Shorten
+    document.getElementById('shortenForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('urlInput').value.trim();
+      const errEl = document.getElementById('shortenError');
+      const resultEl = document.getElementById('shortenResult');
+      errEl.textContent = '';
+      resultEl.classList.remove('show');
+
+      if (!url) return;
+
+      document.getElementById('shortenBtn').disabled = true;
+      try {
+        const res = await fetch(API + '/shorten', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || 'Failed to shorten URL');
+        }
+        const data = await res.json();
+        const shortUrl = window.location.origin + '/' + data.short;
+
+        document.getElementById('shortUrl').textContent = shortUrl;
+        document.getElementById('originalUrl').textContent = data.url;
+        resultEl.classList.add('show');
+
+        history.unshift({ code: data.short, url: data.url, clicks: 0 });
+        renderHistory();
+        document.getElementById('urlInput').value = '';
+      } catch (err) {
+        errEl.textContent = err.message;
+      } finally {
+        document.getElementById('shortenBtn').disabled = false;
+      }
+    });
+
+    // Copy to clipboard
+    document.getElementById('shortUrl').addEventListener('click', async () => {
+      const text = document.getElementById('shortUrl').textContent;
+      await navigator.clipboard.writeText(text);
+      const msg = document.getElementById('copiedMsg');
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 1500);
+    });
+
+    function renderHistory() {
+      const card = document.getElementById('historyCard');
+      const body = document.getElementById('historyBody');
+      if (history.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      body.innerHTML = history.map(h => `
+        <tr>
+          <td class="code-cell">${esc(h.code)}</td>
+          <td class="url-cell" title="${esc(h.url)}">${esc(h.url)}</td>
+          <td class="click-count">${h.clicks}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Refresh click counts for history items
+    async function refreshHistory() {
+      for (const item of history) {
+        try {
+          const res = await fetch(API + '/stats/' + item.code);
+          if (res.ok) {
+            const data = await res.json();
+            item.clicks = data.clicks || 0;
+          }
+        } catch {}
+      }
+      renderHistory();
+    }
+    setInterval(refreshHistory, 5000);
+
+    // Dashboard
+    async function loadDashboard() {
+      try {
+        const res = await fetch(DASHBOARD + '/summary');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('totalUrls').textContent = data.total_urls;
+          document.getElementById('totalClicks').textContent = data.total_clicks;
+          document.getElementById('clicksToday').textContent = data.clicks_today;
+        }
+      } catch {
+        document.getElementById('totalUrls').textContent = '-';
+        document.getElementById('totalClicks').textContent = '-';
+        document.getElementById('clicksToday').textContent = '-';
+      }
+
+      // Top URLs
+      try {
+        const res = await fetch(DASHBOARD + '/top');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            document.getElementById('topUrlsContent').innerHTML = `
+              <table>
+                <thead><tr><th>Code</th><th>URL</th><th>Clicks</th></tr></thead>
+                <tbody>${data.map(t => `
+                  <tr>
+                    <td class="code-cell">${esc(t.short_code)}</td>
+                    <td class="url-cell" title="${esc(t.url)}">${esc(t.url)}</td>
+                    <td class="click-count">${t.clicks}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>`;
+          } else {
+            document.getElementById('topUrlsContent').innerHTML = '<div class="empty-state">No URLs yet</div>';
+          }
+        }
+      } catch {
+        document.getElementById('topUrlsContent').innerHTML = '<div class="empty-state">Dashboard unavailable</div>';
+      }
+
+      // Recent Clicks
+      try {
+        const res = await fetch(DASHBOARD + '/recent');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            document.getElementById('recentContent').innerHTML = `
+              <table>
+                <thead><tr><th>Code</th><th>IP</th><th>Time</th></tr></thead>
+                <tbody>${data.slice(0, 10).map(c => `
+                  <tr>
+                    <td class="code-cell">${esc(c.short_code)}</td>
+                    <td>${esc(c.ip)}</td>
+                    <td>${formatTime(c.clicked_at)}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>`;
+          } else {
+            document.getElementById('recentContent').innerHTML = '<div class="empty-state">No clicks yet</div>';
+          }
+        }
+      } catch {
+        document.getElementById('recentContent').innerHTML = '<div class="empty-state">Dashboard unavailable</div>';
+      }
+    }
+
+    // Lookup
+    document.getElementById('lookupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('lookupInput').value.trim();
+      const errEl = document.getElementById('lookupError');
+      const resultEl = document.getElementById('lookupResult');
+      errEl.textContent = '';
+      resultEl.classList.remove('show');
+
+      if (!code) return;
+
+      try {
+        const res = await fetch(API + '/stats/' + encodeURIComponent(code));
+        if (!res.ok) throw new Error('Short code not found');
+        const data = await res.json();
+
+        document.getElementById('lkCode').textContent = data.short;
+        document.getElementById('lkUrl').textContent = data.url;
+        document.getElementById('lkUrl').title = data.url;
+        document.getElementById('lkClicks').textContent = data.clicks;
+        resultEl.classList.add('show');
+      } catch (err) {
+        errEl.textContent = err.message;
+      }
+    });
+
+    // Helpers
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+    function formatTime(ts) {
+      if (!ts) return '-';
+      try {
+        const d = new Date(ts);
+        return d.toLocaleTimeString();
+      } catch { return ts; }
+    }
+  </script>
+</body>
+</html>
