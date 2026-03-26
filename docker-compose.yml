@@ -22,7 +22,12 @@ services:
     environment:
       DATABASE_URL: postgresql://app:localdev@postgres:5432/shortener
       REDIS_URL: redis://redis:6379
-      SQS_QUEUE_URL: ""
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
       PORT: "8080"
     depends_on:
       - postgres
@@ -32,7 +37,12 @@ services:
     build: ./services/worker
     environment:
       DATABASE_URL: postgres://app:localdev@postgres:5432/shortener?sslmode=disable
-      SQS_QUEUE_URL: http://localstack:4566/000000000000/click-events
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
     depends_on:
       - postgres
 

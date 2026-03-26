@@ -11,10 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
+var sqsClient *sqs.SQS
 
 type ClickEvent struct {
 	ShortCode string `json:"short_code"`
@@ -22,6 +27,11 @@ type ClickEvent struct {
 	UserAgent string `json:"user_agent"`
 	Referer   string `json:"referer"`
 	Timestamp string `json:"timestamp"`
+}
+
+type SQSMessage struct {
+	Body          string
+	ReceiptHandle string
 }
 
 func main() {
@@ -47,6 +57,8 @@ func main() {
 	if sqsQueue == "" {
 		log.Fatal("SQS_QUEUE_URL is required")
 	}
+
+	sqsClient = newSQSClient()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -119,12 +131,15 @@ func pollSQS(ctx context.Context, queueURL string) {
 		default:
 			messages := receiveSQSMessages(queueURL)
 			for _, msg := range messages {
-				if err := processClickEvent(msg); err != nil {
+				if err := processClickEvent(msg.Body); err != nil {
 					log.Printf("Failed to process event: %v", err)
 					continue
 				}
-				// Delete message from queue after successful processing
-				log.Printf("Processed click event: %s", msg)
+				if err := deleteSQSMessage(queueURL, msg.ReceiptHandle); err != nil {
+					log.Printf("Failed to delete message: %v", err)
+					continue
+				}
+				log.Printf("Processed click event: %s", msg.Body)
 			}
 			if len(messages) == 0 {
 				time.Sleep(5 * time.Second)
@@ -133,11 +148,58 @@ func pollSQS(ctx context.Context, queueURL string) {
 	}
 }
 
-func receiveSQSMessages(queueURL string) []string {
-	// Students implement with AWS SDK SQS ReceiveMessage
-	// Use long polling: WaitTimeSeconds = 20
-	// MaxNumberOfMessages = 10
-	return nil
+func receiveSQSMessages(queueURL string) []SQSMessage {
+	output, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
+		QueueUrl:            aws.String(queueURL),
+		MaxNumberOfMessages: aws.Int64(10),
+		WaitTimeSeconds:     aws.Int64(20),
+	})
+	if err != nil {
+		log.Printf("Failed to receive SQS messages: %v", err)
+		return nil
+	}
+
+	messages := make([]SQSMessage, 0, len(output.Messages))
+	for _, msg := range output.Messages {
+		if msg.Body == nil || msg.ReceiptHandle == nil {
+			continue
+		}
+		messages = append(messages, SQSMessage{
+			Body:          *msg.Body,
+			ReceiptHandle: *msg.ReceiptHandle,
+		})
+	}
+
+	return messages
+}
+
+func deleteSQSMessage(queueURL, receiptHandle string) error {
+	_, err := sqsClient.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(queueURL),
+		ReceiptHandle: aws.String(receiptHandle),
+	})
+	return err
+}
+
+func newSQSClient() *sqs.SQS {
+	region := getEnv("AWS_REGION", getEnv("AWS_DEFAULT_REGION", "us-east-1"))
+	cfg := aws.NewConfig().WithRegion(region)
+
+	if endpoint := os.Getenv("AWS_ENDPOINT_URL"); endpoint != "" {
+		cfg = cfg.WithEndpoint(endpoint)
+	}
+
+	accessKey := getEnv("AWS_ACCESS_KEY_ID", "test")
+	secretKey := getEnv("AWS_SECRET_ACCESS_KEY", "test")
+	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	cfg = cfg.WithCredentials(credentials.NewStaticCredentials(accessKey, secretKey, sessionToken))
+
+	sess, err := session.NewSession(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create SQS session: %v", err)
+	}
+
+	return sqs.New(sess)
 }
 
 func processClickEvent(raw string) error {

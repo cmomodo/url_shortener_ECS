@@ -36,6 +36,8 @@ Write the Dockerfiles. Write the Terraform. Write the CI/CD pipeline. Deploy all
 - Terraform with remote state
 - Multi-stage Docker builds
 
+Terraform uses an S3 backend for remote state, configured in [`infra/state.tf`](/Users/momodou/Documents/projects/Coderco_Projects/url-shortener-main/infra/state.tf). Create the backend bucket once before running `terraform init`, or `init` will fail until the bucket exists.
+
 ### The Deployment Question
 
 You've deployed the service. Now a developer merges a PR and expects their change live within minutes - safely, with zero downtime.
@@ -59,6 +61,12 @@ Design and document the full deployment workflow in your README. Code merge to l
 docker compose up --build
 ```
 
+To smoke test the SQS publish path locally against default AWS, run:
+
+```bash
+./scripts/smoke_sqs.sh
+```
+
 ---
 
 ## Grading
@@ -72,7 +80,7 @@ docker compose up --build
 
 **Tear down when done.** ALB + WAF cost money even idle.
 
-[LocalStack](https://docs.localstack.cloud/getting-started/) works for local testing of SQS.
+Use the default AWS endpoint for SQS testing.
 
 Everything else is on you. Commit small. Good luck.
 # url_shortener_ECS

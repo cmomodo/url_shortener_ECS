@@ -24,7 +24,26 @@ def _get_sqs():
         return None
 
     import boto3
-    _sqs_client = boto3.client("sqs")
+    client_kwargs = {}
+
+    endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
+    if endpoint_url:
+        client_kwargs["endpoint_url"] = endpoint_url
+
+    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
+    if region:
+        client_kwargs["region_name"] = region
+
+    access_key = os.environ.get("AWS_ACCESS_KEY_ID")
+    secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+    session_token = os.environ.get("AWS_SESSION_TOKEN")
+    if access_key and secret_key:
+        client_kwargs["aws_access_key_id"] = access_key
+        client_kwargs["aws_secret_access_key"] = secret_key
+        if session_token:
+            client_kwargs["aws_session_token"] = session_token
+
+    _sqs_client = boto3.client("sqs", **client_kwargs)
     return _sqs_client
 
 
