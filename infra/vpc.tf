@@ -12,7 +12,7 @@ resource "aws_subnet" "private_blocks" {
   count = 2
 
   vpc_id            = data.aws_vpc.main.id
-  cidr_block        = cidrsubnet(data.aws_vpc.main.cidr_block, 8, count.index)
+  cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {

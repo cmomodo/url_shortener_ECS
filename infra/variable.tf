@@ -1,3 +1,9 @@
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for private subnets"
+  default     = ["172.31.96.0/24", "172.31.97.0/24"]
+}
+
 variable "identifier" {
   type        = string
   description = "The name of the AWS RDS instance"
@@ -31,7 +37,7 @@ variable "engine" {
 variable "engine_version" {
   type        = string
   description = "The database engine version"
-  default     = "16.3"
+  default     = "16.13"
 }
 
 variable "instance_class" {

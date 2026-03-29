@@ -1,4 +1,4 @@
-resource "aws_db_instance" "default" {
+resource "aws_db_instance" "url_shortener" {
   depends_on              = [aws_db_subnet_group.default, aws_ecr_repository.api, aws_ecr_repository.dashboard, aws_ecr_repository.worker]
   identifier              = var.db_identifier
   allocated_storage       = var.allocated_storage
