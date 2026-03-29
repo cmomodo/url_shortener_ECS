@@ -15,6 +15,6 @@ repos:
       - id: checkov
         name: Checkov
         entry: checkov -d infra
-        language: python3.14.3
+        language: python
         types: [terraform]
         stages: [pre-push]
