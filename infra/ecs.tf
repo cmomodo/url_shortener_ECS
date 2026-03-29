@@ -1,5 +1,28 @@
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "url-shortener-ecs-task-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_ecs_cluster" "main_cluster" {
-  name = "url-shortener"
+  name       = "url-shortener"
+  depends_on = [aws_db_instance.default]
 
   setting {
     name  = "containerInsights"
@@ -8,6 +31,7 @@ resource "aws_ecs_cluster" "main_cluster" {
 }
 
 resource "aws_ecs_task_definition" "api" {
+  depends_on               = [aws_db_instance.default, aws_iam_role_policy_attachment.ecs_task_execution_role]
   family                   = "api"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"

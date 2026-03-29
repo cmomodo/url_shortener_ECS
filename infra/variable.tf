@@ -25,13 +25,13 @@ variable "db_name" {
 variable "engine" {
   type        = string
   description = "The database engine to use"
-  default     = "mysql"
+  default     = "postgres"
 }
 
 variable "engine_version" {
   type        = string
   description = "The database engine version"
-  default     = "8.0"
+  default     = "16.3"
 }
 
 variable "instance_class" {
@@ -43,7 +43,7 @@ variable "instance_class" {
 variable "db_username" {
   type        = string
   description = "The master username for the database"
-  default     = "foo"
+  default     = "postgres"
 }
 
 variable "db_password" {
@@ -56,5 +56,11 @@ variable "db_password" {
 variable "parameter_group_name" {
   type        = string
   description = "The database parameter group name"
-  default     = "default.mysql8.0"
+  default     = "default.postgres16"
+}
+
+variable "public_accessible" {
+  type        = bool
+  description = "Whether the RDS instance should be publicly accessible"
+  default     = false
 }
