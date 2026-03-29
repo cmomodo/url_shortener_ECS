@@ -46,3 +46,67 @@ resource "aws_iam_role_policy" "ecs_ssm_policy" {
     }]
   })
 }
+
+resource "aws_iam_role" "api_task_role" {
+  name = "url-shortener-api-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "api_task_sqs_policy" {
+  name = "api-send-click-events"
+  role = aws_iam_role.api_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ]
+      Resource = aws_sqs_queue.terraform_queue.arn
+    }]
+  })
+}
+
+resource "aws_iam_role" "worker_task_role" {
+  name = "url-shortener-worker-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "worker_task_sqs_policy" {
+  name = "worker-consume-click-events"
+  role = aws_iam_role.worker_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ]
+      Resource = aws_sqs_queue.terraform_queue.arn
+    }]
+  })
+}

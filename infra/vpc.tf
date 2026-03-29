@@ -40,3 +40,54 @@ resource "aws_security_group" "rds_service" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+#security group for the ecs tasks
+resource "aws_security_group" "ecs_tasks" {
+  name   = "url-shortener-ecs-tasks"
+  vpc_id = data.aws_vpc.main.id
+
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "dashboard_tasks" {
+  name   = "url-shortener-dashboard-tasks"
+  vpc_id = data.aws_vpc.main.id
+
+  ingress {
+    from_port       = 8081
+    to_port         = 8081
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "worker_tasks" {
+  name   = "url-shortener-worker-tasks"
+  vpc_id = data.aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}

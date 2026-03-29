@@ -70,3 +70,15 @@ variable "public_accessible" {
   description = "Whether the RDS instance should be publicly accessible"
   default     = false
 }
+
+variable "worker_image_tag" {
+  type        = string
+  description = "Immutable ECR tag for the worker image"
+  default     = "worker-sqs-auth-fix-20260329"
+}
+
+variable "api_image_tag" {
+  type        = string
+  description = "Immutable ECR tag for the API image"
+  default     = "api-sqs-event-fix-20260329"
+}

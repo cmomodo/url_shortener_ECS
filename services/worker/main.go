@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	_ "github.com/lib/pq"
@@ -188,11 +187,6 @@ func newSQSClient() *sqs.SQS {
 	if endpoint := os.Getenv("AWS_ENDPOINT_URL"); endpoint != "" {
 		cfg = cfg.WithEndpoint(endpoint)
 	}
-
-	accessKey := getEnv("AWS_ACCESS_KEY_ID", "test")
-	secretKey := getEnv("AWS_SECRET_ACCESS_KEY", "test")
-	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
-	cfg = cfg.WithCredentials(credentials.NewStaticCredentials(accessKey, secretKey, sessionToken))
 
 	sess, err := session.NewSession(cfg)
 	if err != nil {
