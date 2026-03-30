@@ -1,8 +1,10 @@
-# ECR repositories — one per service
 resource "aws_ecr_repository" "api" {
   name                 = "url-shortener/api"
   image_tag_mutability = "IMMUTABLE"
-  depends_on           = [aws_subnet.private_blocks, aws_security_group.rds_service]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
   encryption_configuration {
     encryption_type = "AES256"
@@ -16,7 +18,10 @@ resource "aws_ecr_repository" "api" {
 resource "aws_ecr_repository" "dashboard" {
   name                 = "url-shortener/dashboard"
   image_tag_mutability = "IMMUTABLE"
-  depends_on           = [aws_subnet.private_blocks, aws_security_group.rds_service]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
   encryption_configuration {
     encryption_type = "AES256"
@@ -30,7 +35,10 @@ resource "aws_ecr_repository" "dashboard" {
 resource "aws_ecr_repository" "worker" {
   name                 = "url-shortener/worker"
   image_tag_mutability = "IMMUTABLE"
-  depends_on           = [aws_subnet.private_blocks, aws_security_group.rds_service]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
   encryption_configuration {
     encryption_type = "AES256"
@@ -41,7 +49,6 @@ resource "aws_ecr_repository" "worker" {
   }
 }
 
-# Lifecycle policies - Clean up old images
 resource "aws_ecr_lifecycle_policy" "api" {
   repository = aws_ecr_repository.api.name
 
@@ -91,4 +98,16 @@ resource "aws_ecr_lifecycle_policy" "worker" {
       action = { type = "expire" }
     }]
   })
+}
+
+output "api_repository_url" {
+  value = aws_ecr_repository.api.repository_url
+}
+
+output "dashboard_repository_url" {
+  value = aws_ecr_repository.dashboard.repository_url
+}
+
+output "worker_repository_url" {
+  value = aws_ecr_repository.worker.repository_url
 }

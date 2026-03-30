@@ -82,3 +82,10 @@ variable "api_image_tag" {
   description = "Immutable ECR tag for the API image"
   default     = "api-sqs-event-fix-20260329"
 }
+
+#hosted zone id
+variable "hosted_zone_id" {
+  type        = string
+  description = "The ID of the hosted zone"
+  default     = "Z030173428PFHIJ7AINAQ"
+}

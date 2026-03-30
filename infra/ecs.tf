@@ -10,6 +10,13 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -63,6 +70,23 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = data.aws_acm_certificate.cert.arn
+
+  default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
   }
@@ -86,7 +110,7 @@ resource "aws_lb_target_group" "dashboard" {
 }
 
 resource "aws_lb_listener_rule" "dashboard" {
-  listener_arn = aws_lb_listener.http.arn
+  listener_arn = aws_lb_listener.https.arn
   priority     = 10
 
   condition {
@@ -116,7 +140,7 @@ resource "aws_ecs_task_definition" "dashboard" {
 
   container_definitions = jsonencode([{
     name         = "dashboard"
-    image        = "${aws_ecr_repository.dashboard.repository_url}:latest"
+    image        = "${data.aws_ecr_repository.dashboard.repository_url}:latest"
     essential    = true
     portMappings = [{ containerPort = 8081, protocol = "tcp" }]
     environment = [
@@ -156,7 +180,7 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 }
 
 #ecs cluster we are using for the services
@@ -187,7 +211,7 @@ resource "aws_ecs_task_definition" "api" {
 
   container_definitions = jsonencode([{
     name         = "api"
-    image        = "${aws_ecr_repository.api.repository_url}:${var.api_image_tag}"
+    image        = "${data.aws_ecr_repository.api.repository_url}:${var.api_image_tag}"
     essential    = true
     portMappings = [{ containerPort = 8080, protocol = "tcp" }]
     environment = [
@@ -231,7 +255,7 @@ resource "aws_ecs_service" "api" {
     container_port   = 8080
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 }
 
 #api output
@@ -273,7 +297,7 @@ resource "aws_ecs_task_definition" "worker" {
   container_definitions = jsonencode([
     {
       name      = "worker"
-      image     = "${aws_ecr_repository.worker.repository_url}:${var.worker_image_tag}"
+      image     = "${data.aws_ecr_repository.worker.repository_url}:${var.worker_image_tag}"
       essential = true
       portMappings = [
         { containerPort = 8090, protocol = "tcp" }
