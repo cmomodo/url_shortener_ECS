@@ -58,7 +58,7 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 
 	var totalURLs, totalClicks, clicksToday int
 	db.QueryRow("SELECT COUNT(*) FROM urls").Scan(&totalURLs)
-	db.QueryRow("SELECT COALESCE(SUM(clicks), 0) FROM urls").Scan(&totalClicks)
+	db.QueryRow("SELECT COALESCE(SUM(clicks), 0) FROM click_stats_hourly").Scan(&totalClicks)
 	db.QueryRow(
 		"SELECT COALESCE(SUM(clicks), 0) FROM click_stats_hourly WHERE hour >= $1",
 		today,

@@ -364,7 +364,8 @@
 
   <script>
     const API = '';  // same origin
-    const DASHBOARD = window.location.protocol + '//' + window.location.hostname + ':8081';
+    const DASHBOARD = '';  // same origin via ALB path routing
+    let dashboardRefreshTimer = null;
 
     // Session history
     const history = [];
@@ -376,7 +377,12 @@
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-        if (tab.dataset.tab === 'dashboard') loadDashboard();
+        if (tab.dataset.tab === 'dashboard') {
+          loadDashboard();
+          startDashboardRefresh();
+        } else {
+          stopDashboardRefresh();
+        }
       });
     });
 
@@ -522,6 +528,22 @@
       } catch {
         document.getElementById('recentContent').innerHTML = '<div class="empty-state">Dashboard unavailable</div>';
       }
+    }
+
+    function startDashboardRefresh() {
+      if (dashboardRefreshTimer) return;
+      dashboardRefreshTimer = setInterval(() => {
+        const dashboardTab = document.getElementById('tab-dashboard');
+        if (dashboardTab.classList.contains('active')) {
+          loadDashboard();
+        }
+      }, 5000);
+    }
+
+    function stopDashboardRefresh() {
+      if (!dashboardRefreshTimer) return;
+      clearInterval(dashboardRefreshTimer);
+      dashboardRefreshTimer = null;
     }
 
     // Lookup
