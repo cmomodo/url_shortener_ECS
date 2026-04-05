@@ -12,6 +12,21 @@ If both are set, DATABASE_URL takes precedence.
 import os
 
 _backend = None
+_redis = None
+
+CACHE_TTL = 3600  # 1 hour
+
+
+def _get_redis():
+    global _redis
+    if _redis is not None:
+        return _redis
+    redis_url = os.environ.get("REDIS_URL")
+    if not redis_url:
+        return None
+    import redis
+    _redis = redis.from_url(redis_url, decode_responses=True)
+    return _redis
 
 
 def _get_backend():
@@ -92,9 +107,22 @@ def _init_postgres():
 
 def put_mapping(short_id: str, url: str):
     _get_backend()["put"](short_id, url)
+    r = _get_redis()
+    if r:
+        r.setex(f"url:{short_id}", CACHE_TTL, url)
 
 
 def get_mapping(short_id: str):
+    r = _get_redis()
+    if r:
+        cached = r.get(f"url:{short_id}")
+        if cached:
+            return {"id": short_id, "url": cached, "clicks": 0}
+    return _get_backend()["get"](short_id)
+
+
+def get_mapping_with_stats(short_id: str):
+    """Fetch the full record from DB, bypassing Redis cache for accurate click counts."""
     return _get_backend()["get"](short_id)
 
 

@@ -24,7 +24,17 @@ def _get_sqs():
         return None
 
     import boto3
-    _sqs_client = boto3.client("sqs")
+    client_kwargs = {}
+
+    endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
+    if endpoint_url:
+        client_kwargs["endpoint_url"] = endpoint_url
+
+    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
+    if region:
+        client_kwargs["region_name"] = region
+
+    _sqs_client = boto3.client("sqs", **client_kwargs)
     return _sqs_client
 
 

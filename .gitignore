@@ -1,9 +1,30 @@
 .env
 .DS_Store
+scripts/*.pem
 
 __pycache__/
 .venv/
 *.pyc
 *.out
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.d/
+*.tfplan
 .plan
-terraform.tfstate*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+#ignore generated files
+generated-diagrams
+
+#ignore state file
+state.tf

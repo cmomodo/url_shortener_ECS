@@ -1,10 +1,6 @@
-<div align="center">
-    <img src="./images/coderco.jpg" alt="CoderCo" width="300"/>
-</div>
-
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else.
+A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else. we have added rds and also 
 
 ## Services
 
@@ -18,11 +14,16 @@ Read the code. Environment variables and endpoints are in the source files.
 
 ---
 
-## Your Job
+## requisites 
 
-Write the Dockerfiles. Write the Terraform. Write the CI/CD pipeline. Deploy all three services to ECS Fargate on AWS.
+Docker 
+Terraform 
+AWS 
 
-### Requirements
+# System Design
+
+
+### Features
 
 - ECS Fargate - three separate services, one cluster
 - Application Load Balancer with WAF routing to the correct service
@@ -35,6 +36,8 @@ Write the Dockerfiles. Write the Terraform. Write the CI/CD pipeline. Deploy all
 - Least-privilege IAM throughout
 - Terraform with remote state
 - Multi-stage Docker builds
+
+Terraform uses an S3 backend for remote state, configured in [`infra/state.tf`](/Users/momodou/Documents/projects/Coderco_Projects/url-shortener-main/infra/state.tf). Create the backend bucket once before running `terraform init`, or `init` will fail until the bucket exists.
 
 ### The Deployment Question
 
@@ -59,6 +62,12 @@ Design and document the full deployment workflow in your README. Code merge to l
 docker compose up --build
 ```
 
+To smoke test the SQS publish path locally against default AWS, run:
+
+```bash
+./scripts/smoke_sqs.sh
+```
+
 ---
 
 ## Grading
@@ -72,7 +81,7 @@ docker compose up --build
 
 **Tear down when done.** ALB + WAF cost money even idle.
 
-[LocalStack](https://docs.localstack.cloud/getting-started/) works for local testing of SQS.
+Use the default AWS endpoint for SQS testing.
 
 Everything else is on you. Commit small. Good luck.
 # url_shortener_ECS
