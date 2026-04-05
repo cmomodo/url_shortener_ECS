@@ -1,3 +1,4 @@
+#redis instance.
 resource "aws_elasticache_cluster" "url_shortener" {
   cluster_id           = "cluster-url"
   engine               = "redis"
@@ -10,6 +11,7 @@ resource "aws_elasticache_cluster" "url_shortener" {
   security_group_ids   = [aws_security_group.ecs_tasks.id]
 }
 
+#placing it inside the private subnet.
 resource "aws_elasticache_subnet_group" "url_shortener" {
   name       = "url-shortener-cache"
   subnet_ids = aws_subnet.private_blocks[*].id

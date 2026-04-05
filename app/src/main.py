@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import os, hashlib, time, json
-from .db import put_mapping, get_mapping, get_backend_type, increment_clicks
+from .db import put_mapping, get_mapping, get_mapping_with_stats, get_backend_type, increment_clicks
 from .events import publish_click_event
 
 app = FastAPI()
@@ -43,7 +43,7 @@ async def shorten(req: Request):
 
 @app.get("/stats/{short_id}")
 def stats(short_id: str):
-    item = get_mapping(short_id)
+    item = get_mapping_with_stats(short_id)
     if not item:
         raise HTTPException(404, "not found")
     return {"short": short_id, "url": item["url"], "clicks": item.get("clicks", 0)}

@@ -1,10 +1,6 @@
-<div align="center">
-    <img src="./images/coderco.jpg" alt="CoderCo" width="300"/>
-</div>
-
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else.
+A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else. we have added rds and also 
 
 ## Services
 
@@ -18,11 +14,16 @@ Read the code. Environment variables and endpoints are in the source files.
 
 ---
 
-## Your Job
+## requisites 
 
-Write the Dockerfiles. Write the Terraform. Write the CI/CD pipeline. Deploy all three services to ECS Fargate on AWS.
+Docker 
+Terraform 
+AWS 
 
-### Requirements
+# System Design
+
+
+### Features
 
 - ECS Fargate - three separate services, one cluster
 - Application Load Balancer with WAF routing to the correct service

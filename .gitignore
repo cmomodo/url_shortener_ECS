@@ -1,5 +1,6 @@
 .env
 .DS_Store
+scripts/*.pem
 
 __pycache__/
 .venv/

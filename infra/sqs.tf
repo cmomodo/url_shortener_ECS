@@ -1,3 +1,4 @@
+#primary queue
 resource "aws_sqs_queue" "terraform_queue" {
   name                      = "primary_queue"
   delay_seconds             = 90

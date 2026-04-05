@@ -2,6 +2,7 @@ data "aws_route53_zone" "main" {
   zone_id = var.hosted_zone_id
 }
 
+#route 53 record
 resource "aws_route53_record" "main" {
   zone_id = data.aws_route53_zone.main.zone_id
   name    = "ceedev.co.uk"

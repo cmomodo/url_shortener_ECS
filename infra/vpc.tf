@@ -61,6 +61,7 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+#dashboard security group
 resource "aws_security_group" "dashboard_tasks" {
   name   = "url-shortener-dashboard-tasks"
   vpc_id = data.aws_vpc.main.id
@@ -80,6 +81,7 @@ resource "aws_security_group" "dashboard_tasks" {
   }
 }
 
+#worker task security group
 resource "aws_security_group" "worker_tasks" {
   name   = "url-shortener-worker-tasks"
   vpc_id = data.aws_vpc.main.id
@@ -89,5 +91,79 @@ resource "aws_security_group" "worker_tasks" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+#cloudfront security group
+resource "aws_security_group" "example" {
+  name        = "my-sg"
+  description = "Allow SSH and HTTP traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Restrict this in production!
+    description = "Allow SSH traffic"
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Restrict this in production!
+    description = "Allow HTTP traffic"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # All protocols
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "my-sg"
+  }
+}
+
+#security group for alb
+resource "aws_security_group" "alb" {
+  name   = "url-shortener-alb"
+  vpc_id = data.aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+
+#using built in subnets for the vpc
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.main.id]
+  }
+  filter {
+    name   = "defaultForAz"
+    values = ["true"]
   }
 }
