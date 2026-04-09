@@ -7,6 +7,8 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+#privatae subnet endpoint.
+
 #private subnets
 resource "aws_subnet" "private_blocks" {
   count = 2
