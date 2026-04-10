@@ -130,7 +130,7 @@ resource "aws_ecs_service" "dashboard" {
   network_configuration {
     subnets          = aws_subnet.private_blocks[*].id
     security_groups  = [aws_security_group.dashboard_tasks.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -206,7 +206,7 @@ resource "aws_ecs_service" "api" {
   network_configuration {
     subnets          = aws_subnet.private_blocks[*].id
     security_groups  = [aws_security_group.ecs_tasks.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -235,7 +235,7 @@ resource "aws_ecs_service" "worker" {
   network_configuration {
     subnets          = aws_subnet.private_blocks[*].id
     security_groups  = [aws_security_group.worker_tasks.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 }
 

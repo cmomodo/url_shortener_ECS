@@ -13,13 +13,29 @@ data "aws_availability_zones" "available" {
 resource "aws_subnet" "private_blocks" {
   count = 2
 
-  vpc_id            = data.aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  vpc_id                  = data.aws_vpc.main.id
+  cidr_block              = var.private_subnet_cidrs[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "private-subnet-${count.index}"
   }
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = data.aws_vpc.main.id
+
+  tags = {
+    Name = "url-shortener-private"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count = length(aws_subnet.private_blocks)
+
+  subnet_id      = aws_subnet.private_blocks[count.index].id
+  route_table_id = aws_route_table.private.id
 }
 
 # RDS security group inside the VPC layer.
@@ -87,6 +103,40 @@ resource "aws_security_group" "dashboard_tasks" {
 resource "aws_security_group" "worker_tasks" {
   name   = "url-shortener-worker-tasks"
   vpc_id = data.aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "vpce_interface" {
+  name        = "url-shortener-vpce-interface"
+  description = "Allow ECS tasks to reach interface endpoints over HTTPS"
+  vpc_id      = data.aws_vpc.main.id
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_tasks.id]
+  }
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.dashboard_tasks.id]
+  }
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.worker_tasks.id]
+  }
 
   egress {
     from_port   = 0
