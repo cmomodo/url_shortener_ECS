@@ -36,4 +36,15 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
-#kms interface endpoint
+resource "aws_vpc_endpoint" "kms" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${data.aws_region.current.region}.kms"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_blocks[*].id
+  security_group_ids  = [aws_security_group.vpce_interface.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "url-shortener-kms-endpoint"
+  }
+}
