@@ -33,17 +33,29 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Default key for SSM SecureString parameters (used by /url-shortener/* SecureStrings).
+data "aws_kms_key" "ssm" {
+  key_id = "alias/aws/ssm"
+}
+
 resource "aws_iam_role_policy" "ecs_ssm_policy" {
   name = "ecs-ssm-read"
   role = aws_iam_role.ecs_task_execution_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameters", "ssm:GetParameter"]
-      Resource = "arn:aws:ssm:us-east-1:*:parameter/url-shortener/*"
-    }]
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameters", "ssm:GetParameter"]
+        Resource = "arn:aws:ssm:us-east-1:*:parameter/url-shortener/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = data.aws_kms_key.ssm.arn
+      }
+    ]
   })
 }
 
