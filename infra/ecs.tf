@@ -1,13 +1,25 @@
 #load balancer for the ecs service
 resource "aws_lb" "main" {
-  name               = "url-shortener"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = data.aws_subnets.default.ids
+  name                       = "url-shortener"
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = data.aws_subnets.default.ids
+  enable_deletion_protection = true
+  drop_invalid_header_fields = true
+  enable_http2               = true
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.id
+    prefix  = "alb"
+    enabled = true
+  }
+
+  depends_on = [aws_s3_bucket_policy.alb_logs]
 }
 
 #target group for the api load balancer
+#checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
 resource "aws_lb_target_group" "api" {
   name        = "url-shortener-api"
   port        = 8080
@@ -42,7 +54,7 @@ resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = data.aws_acm_certificate.cert.arn
 
   default_action {
@@ -53,6 +65,7 @@ resource "aws_lb_listener" "https" {
 
 
 
+#checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
 resource "aws_lb_target_group" "dashboard" {
   name        = "url-shortener-dashboard"
   port        = 8081
@@ -97,10 +110,20 @@ resource "aws_ecs_task_definition" "dashboard" {
     cpu_architecture        = "ARM64"
   }
 
+  volume {
+    name = "tmp"
+  }
+
   container_definitions = jsonencode([{
-    name         = "dashboard"
-    image        = "${data.aws_ecr_repository.dashboard.repository_url}:latest"
-    essential    = true
+    name                   = "dashboard"
+    image                  = "${data.aws_ecr_repository.dashboard.repository_url}:latest"
+    essential              = true
+    readonlyRootFilesystem = true
+    mountPoints = [{
+      sourceVolume  = "tmp"
+      containerPath = "/tmp"
+      readOnly      = false
+    }]
     portMappings = [{ containerPort = 8081, protocol = "tcp" }]
     environment = [
       { name = "PORT", value = "8081" },
@@ -168,10 +191,20 @@ resource "aws_ecs_task_definition" "api" {
     cpu_architecture        = "ARM64"
   }
 
+  volume {
+    name = "tmp"
+  }
+
   container_definitions = jsonencode([{
-    name         = "api"
-    image        = "${data.aws_ecr_repository.api.repository_url}:${var.api_image_tag}"
-    essential    = true
+    name                   = "api"
+    image                  = "${data.aws_ecr_repository.api.repository_url}:${var.api_image_tag}"
+    essential              = true
+    readonlyRootFilesystem = true
+    mountPoints = [{
+      sourceVolume  = "tmp"
+      containerPath = "/tmp"
+      readOnly      = false
+    }]
     portMappings = [{ containerPort = 8080, protocol = "tcp" }]
     environment = [
       { name = "PORT", value = "8080" },
@@ -254,11 +287,21 @@ resource "aws_ecs_task_definition" "worker" {
     cpu_architecture        = "ARM64"
   }
 
+  volume {
+    name = "tmp"
+  }
+
   container_definitions = jsonencode([
     {
-      name      = "worker"
-      image     = "${data.aws_ecr_repository.worker.repository_url}:${var.worker_image_tag}"
-      essential = true
+      name                   = "worker"
+      image                  = "${data.aws_ecr_repository.worker.repository_url}:${var.worker_image_tag}"
+      essential              = true
+      readonlyRootFilesystem = true
+      mountPoints = [{
+        sourceVolume  = "tmp"
+        containerPath = "/tmp"
+        readOnly      = false
+      }]
       portMappings = [
         { containerPort = 8090, protocol = "tcp" }
       ]

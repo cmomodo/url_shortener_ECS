@@ -1,10 +1,12 @@
 #primary queue
 resource "aws_sqs_queue" "terraform_queue" {
-  name                      = "primary_queue"
-  delay_seconds             = 90
-  max_message_size          = 2048
-  message_retention_seconds = 86400
-  receive_wait_time_seconds = 10
+  name                              = "primary_queue"
+  delay_seconds                     = 90
+  max_message_size                  = 2048
+  message_retention_seconds         = 86400
+  receive_wait_time_seconds         = 10
+  kms_master_key_id                 = aws_kms_key.app.id
+  kms_data_key_reuse_period_seconds = 300
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.secondary_queue_deadletter.arn
     maxReceiveCount     = 4
@@ -17,7 +19,9 @@ resource "aws_sqs_queue" "terraform_queue" {
 
 #sqs queue for dead letter
 resource "aws_sqs_queue" "secondary_queue_deadletter" {
-  name = "backup-queue"
+  name                              = "backup-queue"
+  kms_master_key_id                 = aws_kms_key.app.id
+  kms_data_key_reuse_period_seconds = 300
 }
 
 #redrive pollicy

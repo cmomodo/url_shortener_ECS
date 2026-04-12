@@ -1,3 +1,8 @@
+variable "alb_allowed_ingress_cidrs" {
+  type        = list(string)
+  description = "IPv4 CIDRs allowed to reach the ALB on ports 80 and 443. Set in terraform.tfvars (see terraform.tfvars.example); do not commit real addresses. Use [\"0.0.0.0/0\"] only if you accept a public ALB."
+}
+
 variable "private_subnet_cidrs" {
   type        = list(string)
   description = "CIDR blocks for private subnets"
@@ -57,12 +62,6 @@ variable "db_password" {
   description = "The master password for the database"
   default     = "foobarbaz"
   sensitive   = true
-}
-
-variable "parameter_group_name" {
-  type        = string
-  description = "The database parameter group name"
-  default     = "default.postgres16"
 }
 
 variable "public_accessible" {

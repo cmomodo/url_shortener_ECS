@@ -7,8 +7,6 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-#privatae subnet endpoint.
-
 #private subnets
 resource "aws_subnet" "private_blocks" {
   count = 2
@@ -45,6 +43,7 @@ resource "aws_security_group" "rds_service" {
   vpc_id      = data.aws_vpc.main.id
 
   ingress {
+    description = "PostgreSQL from the VPC"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
@@ -52,19 +51,22 @@ resource "aws_security_group" "rds_service" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS for RDS maintenance and patching"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 #security group for the ecs tasks
 resource "aws_security_group" "ecs_tasks" {
-  name   = "url-shortener-ecs-tasks"
-  vpc_id = data.aws_vpc.main.id
+  name        = "url-shortener-ecs-tasks"
+  description = "Ingress from ALB; egress for AWS APIs, Postgres, and Redis"
+  vpc_id      = data.aws_vpc.main.id
 
   ingress {
+    description     = "API container port from ALB"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
@@ -72,19 +74,38 @@ resource "aws_security_group" "ecs_tasks" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS for AWS APIs and interface endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "PostgreSQL to the VPC"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    description = "Redis to the VPC"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 }
 
 #dashboard security group
 resource "aws_security_group" "dashboard_tasks" {
-  name   = "url-shortener-dashboard-tasks"
-  vpc_id = data.aws_vpc.main.id
+  name        = "url-shortener-dashboard-tasks"
+  description = "Ingress from ALB; egress for AWS APIs, Postgres, and Redis"
+  vpc_id      = data.aws_vpc.main.id
 
   ingress {
+    description     = "Dashboard container port from ALB"
     from_port       = 8081
     to_port         = 8081
     protocol        = "tcp"
@@ -92,23 +113,58 @@ resource "aws_security_group" "dashboard_tasks" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS for AWS APIs and interface endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "PostgreSQL to the VPC"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    description = "Redis to the VPC"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 }
 
 #worker task security group
 resource "aws_security_group" "worker_tasks" {
-  name   = "url-shortener-worker-tasks"
-  vpc_id = data.aws_vpc.main.id
+  name        = "url-shortener-worker-tasks"
+  description = "Worker egress for AWS APIs, Postgres, Redis, and SQS"
+  vpc_id      = data.aws_vpc.main.id
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS for AWS APIs and interface endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "PostgreSQL to the VPC"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    description = "Redis to the VPC"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 }
 
@@ -118,6 +174,7 @@ resource "aws_security_group" "vpce_interface" {
   vpc_id      = data.aws_vpc.main.id
 
   ingress {
+    description     = "HTTPS from API tasks"
     from_port       = 443
     to_port         = 443
     protocol        = "tcp"
@@ -125,6 +182,7 @@ resource "aws_security_group" "vpce_interface" {
   }
 
   ingress {
+    description     = "HTTPS from dashboard tasks"
     from_port       = 443
     to_port         = 443
     protocol        = "tcp"
@@ -132,6 +190,7 @@ resource "aws_security_group" "vpce_interface" {
   }
 
   ingress {
+    description     = "HTTPS from worker tasks"
     from_port       = 443
     to_port         = 443
     protocol        = "tcp"
@@ -139,74 +198,52 @@ resource "aws_security_group" "vpce_interface" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-#cloudfront security group
-resource "aws_security_group" "example" {
-  name        = "my-sg"
-  description = "Allow SSH and HTTP traffic"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
+    description = "Return traffic within the VPC"
+    from_port   = 1024
+    to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # WARNING: Restrict this in production!
-    description = "Allow SSH traffic"
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # WARNING: Restrict this in production!
-    description = "Allow HTTP traffic"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1" # All protocols
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "my-sg"
-  }
-}
-
-#security group for alb
-resource "aws_security_group" "alb" {
-  name   = "url-shortener-alb"
-  vpc_id = data.aws_vpc.main.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
+    description = "HTTPS to the internet for AWS service backends"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
+#security group for alb
+resource "aws_security_group" "alb" {
+  name        = "url-shortener-alb"
+  description = "Web traffic to the application load balancer (ingress limited by var.alb_allowed_ingress_cidrs)"
+  vpc_id      = data.aws_vpc.main.id
 
+  ingress {
+    description = "HTTP redirect to HTTPS"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = var.alb_allowed_ingress_cidrs
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.alb_allowed_ingress_cidrs
+  }
+
+  egress {
+    description = "To API and dashboard tasks in the VPC (avoids SG cycle with task groups)"
+    from_port   = 8080
+    to_port     = 8081
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+}
 
 #using built in subnets for the vpc
 data "aws_subnets" "default" {

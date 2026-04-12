@@ -2,16 +2,19 @@
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/api"
   retention_in_days = 7
+  kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "dashboard" {
   name              = "/ecs/dashboard"
   retention_in_days = 7
+  kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "worker" {
   name              = "/ecs/worker"
   retention_in_days = 7
+  kms_key_id        = aws_kms_key.app.arn
 }
 
 #iam role
@@ -51,9 +54,18 @@ resource "aws_iam_role_policy" "ecs_ssm_policy" {
         Resource = "arn:aws:ssm:us-east-1:*:parameter/url-shortener/*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["kms:Decrypt"]
-        Resource = data.aws_kms_key.ssm.arn
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey",
+          "kms:Encrypt",
+          "kms:CreateGrant"
+        ]
+        Resource = [
+          data.aws_kms_key.ssm.arn,
+          aws_kms_key.app.arn
+        ]
       }
     ]
   })
@@ -78,15 +90,27 @@ resource "aws_iam_role_policy" "api_task_sqs_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:SendMessage",
-        "sqs:GetQueueAttributes",
-        "sqs:GetQueueUrl"
-      ]
-      Resource = aws_sqs_queue.terraform_queue.arn
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl"
+        ]
+        Resource = aws_sqs_queue.terraform_queue.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey"
+        ]
+        Resource = aws_kms_key.app.arn
+      }
+    ]
   })
 }
 
@@ -109,16 +133,26 @@ resource "aws_iam_role_policy" "worker_task_sqs_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:ChangeMessageVisibility",
-        "sqs:GetQueueAttributes",
-        "sqs:GetQueueUrl"
-      ]
-      Resource = aws_sqs_queue.terraform_queue.arn
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:ChangeMessageVisibility",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl"
+        ]
+        Resource = aws_sqs_queue.terraform_queue.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = aws_kms_key.app.arn
+      }
+    ]
   })
 }

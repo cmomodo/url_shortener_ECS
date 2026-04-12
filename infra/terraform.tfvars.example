@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars (gitignored) and replace with your public IPv4 /32.
+# Example uses TEST-NET-3 documentation address only — not routable on the internet.
+alb_allowed_ingress_cidrs = ["203.0.113.1/32"]
