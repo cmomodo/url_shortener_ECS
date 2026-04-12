@@ -9,7 +9,7 @@ resource "aws_elasticache_cluster" "url_shortener" {
   port                     = 6379
   subnet_group_name        = aws_elasticache_subnet_group.url_shortener.name
   security_group_ids       = [aws_security_group.ecs_tasks.id]
-  snapshot_retention_limit = 0
+  snapshot_retention_limit = 1
   snapshot_window          = "03:00-05:00"
 }
 

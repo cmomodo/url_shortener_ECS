@@ -32,6 +32,11 @@ resource "aws_db_parameter_group" "url_shortener" {
     value = "ddl"
   }
 
+  parameter {
+    name  = "rds.force_ssl"
+    value = "1"
+  }
+
   lifecycle {
     create_before_destroy = true
   }
