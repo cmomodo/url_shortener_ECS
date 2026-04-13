@@ -65,6 +65,8 @@ resource "aws_db_instance" "url_shortener" {
   vpc_security_group_ids = [aws_security_group.rds_service.id]
   publicly_accessible    = var.public_accessible
 
+  copy_tags_to_snapshot = true
+
   backup_retention_period               = 0
   maintenance_window                    = "Mon:04:00-Mon:05:00"
   skip_final_snapshot                   = true
