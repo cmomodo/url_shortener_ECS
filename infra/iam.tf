@@ -1,19 +1,19 @@
 #cloudwatch log groups
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/api"
-  retention_in_days = 7
+  retention_in_days = 365
   kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "dashboard" {
   name              = "/ecs/dashboard"
-  retention_in_days = 7
+  retention_in_days = 365
   kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "worker" {
   name              = "/ecs/worker"
-  retention_in_days = 7
+  retention_in_days = 365
   kms_key_id        = aws_kms_key.app.arn
 }
 
