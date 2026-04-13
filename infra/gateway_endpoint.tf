@@ -58,6 +58,20 @@ resource "aws_s3_bucket_notification" "alb_logs" {
 resource "aws_s3_bucket" "alb_logs_access" {
   bucket        = "url-shortener-alb-logs-access-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
+
+  #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
+}
+
+resource "aws_s3_bucket_versioning" "alb_logs_access" {
+  bucket = aws_s3_bucket.alb_logs_access.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_notification" "alb_logs_access" {
+  bucket      = aws_s3_bucket.alb_logs_access.id
+  eventbridge = true
 }
 
 resource "aws_s3_bucket_public_access_block" "alb_logs_access" {
@@ -235,6 +249,26 @@ resource "aws_wafv2_web_acl_association" "alb" {
 resource "aws_s3_bucket" "waf_logs" {
   bucket        = "url-shortener-waf-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
+
+  #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
+}
+
+resource "aws_s3_bucket_versioning" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_notification" "waf_logs" {
+  bucket      = aws_s3_bucket.waf_logs.id
+  eventbridge = true
+}
+
+resource "aws_s3_bucket_logging" "waf_logs" {
+  bucket        = aws_s3_bucket.waf_logs.id
+  target_bucket = aws_s3_bucket.alb_logs_access.id
+  target_prefix = "waf-s3-access-logs/"
 }
 
 resource "aws_s3_bucket_public_access_block" "waf_logs" {

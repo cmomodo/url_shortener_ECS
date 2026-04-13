@@ -65,8 +65,8 @@ resource "aws_lb_listener" "https" {
 
 
 
-#checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
 resource "aws_lb_target_group" "dashboard" {
+  #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
   name        = "url-shortener-dashboard"
   port        = 8081
   protocol    = "HTTP"
