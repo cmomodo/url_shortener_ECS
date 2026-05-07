@@ -14,7 +14,7 @@ terraform apply
 
 To pass the latest Checkov policies, the Terraform was updated to:
 
-- **ALB deletion protection**: `aws_lb.main.enable_deletion_protection = true` (in `infra/ecs.tf`)
+- **ALB deletion protection**: `aws_lb.main.enable_deletion_protection = false` — intentionally disabled for easier teardown in this environment (in `infra/ecs.tf`)
 - **CloudWatch log group retention**: log groups now retain logs for **365 days** (in `infra/iam.tf`)
 - **RDS snapshot tag copying**: `aws_db_instance.url_shortener.copy_tags_to_snapshot = true` (in `infra/database.tf`)
 - **S3 hardening for ALB logs** (in `infra/gateway_endpoint.tf`):
@@ -35,7 +35,9 @@ To pass the latest Checkov policies, the Terraform was updated to:
 
 ### ALB deletion protection can block destroy
 
-If `enable_deletion_protection = true`, AWS will reject deleting the ALB. That means `terraform destroy` will fail until you disable it first.
+`enable_deletion_protection` is currently set to `false`, so ALB deletion will not be blocked during destroy.
+
+If you ever re-enable it, run the teardown workflow below first:
 
 **Teardown workflow:**
 
@@ -54,14 +56,15 @@ After you recreate with `terraform apply`, you can set it back to `true`.
 ### More resources exist now (so destroy removes more things)
 
 Because of Checkov-related changes, `terraform destroy` will also delete:
+
 - **Extra S3 buckets**: access-logs bucket and WAF logs bucket
 - **Kinesis Firehose + IAM role/policy** for WAF logging
 
-Most of these are safe to destroy automatically because the buckets are configured with **`force_destroy = true`** (Terraform will delete objects and then the bucket). If you remove `force_destroy`, you’ll need to empty buckets before destroy.
+Note that `force_destroy = false` on the ALB logs bucket — you will need to empty it manually before `terraform destroy` can remove it.
 
 ### KMS key note
 
-If your `aws_kms_key.app` is configured with a deletion window, destroying it may schedule deletion rather than deleting instantly (AWS behavior). If destroy ever fails around KMS, the fix is usually “don’t destroy the CMK in ephemeral environments” or accept the scheduled deletion window.
+If your `aws_kms_key.app` is configured with a deletion window, destroying it may schedule deletion rather than deleting instantly (AWS behavior). If destroy ever fails around KMS, the fix is usually "don't destroy the CMK in ephemeral environments" or accept the scheduled deletion window.
 
 ## Notes
 

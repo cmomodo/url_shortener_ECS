@@ -1,11 +1,12 @@
 #load balancer for the ecs service
+#checkov:skip=CKV_AWS_150: Deletion protection intentionally disabled for easier teardown in this environment
 resource "aws_lb" "main" {
   name                       = "url-shortener"
   internal                   = false
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
   subnets                    = data.aws_subnets.default.ids
-  enable_deletion_protection = true
+  enable_deletion_protection = false
   drop_invalid_header_fields = true
   enable_http2               = true
 
@@ -228,7 +229,6 @@ resource "aws_ecs_task_definition" "api" {
 }
 
 #ecs service definition
-
 resource "aws_ecs_service" "api" {
   name            = "api"
   cluster         = aws_ecs_cluster.main_cluster.id
@@ -255,6 +255,7 @@ resource "aws_ecs_service" "api" {
 output "alb_dns" {
   value       = aws_lb.main.dns_name
   description = "App URL: http://<alb_dns>/ui"
+  sensitive   = true
 }
 
 #worker service

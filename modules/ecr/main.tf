@@ -3,7 +3,7 @@ resource "aws_ecr_repository" "api" {
   image_tag_mutability = "IMMUTABLE"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   encryption_configuration {
@@ -20,7 +20,7 @@ resource "aws_ecr_repository" "dashboard" {
   image_tag_mutability = "IMMUTABLE"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   encryption_configuration {
@@ -37,7 +37,7 @@ resource "aws_ecr_repository" "worker" {
   image_tag_mutability = "IMMUTABLE"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   encryption_configuration {

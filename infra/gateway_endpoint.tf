@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "alb_logs" {
   bucket        = "url-shortener-alb-logs-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true
+  force_destroy = false
 
   #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
 }

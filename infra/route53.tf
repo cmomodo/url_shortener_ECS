@@ -2,15 +2,13 @@ data "aws_route53_zone" "main" {
   zone_id = var.hosted_zone_id
 }
 
-#route 53 record
-resource "aws_route53_record" "main" {
-  zone_id = data.aws_route53_zone.main.zone_id
-  name    = "ceedev.co.uk"
-  type    = "A"
+# route53 record via module
+module "route53" {
+  source = "./modules/route53"
 
-  alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
-  }
+  hosted_zone_id         = data.aws_route53_zone.main.zone_id
+  record_name            = "ceedev.co.uk"
+  alias_name             = aws_cloudfront_distribution.alb_distribution.domain_name
+  alias_zone_id          = aws_cloudfront_distribution.alb_distribution.hosted_zone_id
+  evaluate_target_health = true
 }
