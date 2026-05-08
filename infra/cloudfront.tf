@@ -1,5 +1,7 @@
 #cloudfront distribution for alb
 resource "aws_cloudfront_distribution" "alb_distribution" {
+  #checkov:skip=CKV2_AWS_47: AWSManagedRulesKnownBadInputsRuleSet (Log4JRCE) is configured in aws_wafv2_web_acl.cloudfront; Checkov cannot cross-reference the WAF rules statically
+  #checkov:skip=CKV2_AWS_46: Origin is an ALB, not an S3 bucket; Origin Access Control is not applicable to ALB origins
   #accept traffic from these domains
    aliases = ["ceedev.co.uk", "www.ceedev.co.uk"]
 
@@ -103,8 +105,20 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
 resource "aws_s3_bucket" "cloudfront_logs" {
   #checkov:skip=CKV_AWS_18: This bucket is itself a log destination; logging it to another bucket is circular
   #checkov:skip=CKV2_AWS_62: Log bucket does not require event notifications
+  #checkov:skip=CKV_AWS_144: Cross-region replication not required for a disposable log bucket in a dev environment
+  #checkov:skip=CKV_AWS_21: Versioning not needed for append-only CloudFront access logs
+  #checkov:skip=CKV_AWS_145: CloudFront log delivery cannot write to KMS-encrypted buckets; SSE-S3 is the only supported encryption for CloudFront logging destinations
   bucket        = "url-shortener-cloudfront-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
+}
+
+# Block all public access on the log bucket — fixes CKV2_AWS_6
+resource "aws_s3_bucket_public_access_block" "cloudfront_logs" {
+  bucket                  = aws_s3_bucket.cloudfront_logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # Lifecycle policy to manage log retention costs — fixes CKV2_AWS_61
