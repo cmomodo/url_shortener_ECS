@@ -1,6 +1,6 @@
 #load balancer for the ecs service
-#checkov:skip=CKV_AWS_150: Deletion protection intentionally disabled for easier teardown in this environment
 resource "aws_lb" "main" {
+  #checkov:skip=CKV_AWS_150: Deletion protection intentionally disabled for easier teardown in this environment
   name                       = "url-shortener"
   internal                   = false
   load_balancer_type         = "application"
