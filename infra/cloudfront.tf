@@ -3,13 +3,13 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
   #checkov:skip=CKV2_AWS_47: AWSManagedRulesKnownBadInputsRuleSet (Log4JRCE) is configured in aws_wafv2_web_acl.cloudfront; Checkov cannot cross-reference the WAF rules statically
   #checkov:skip=CKV2_AWS_46: Origin is an ALB, not an S3 bucket; Origin Access Control is not applicable to ALB origins
   #accept traffic from these domains
-   aliases = ["ceedev.co.uk", "www.ceedev.co.uk"]
+  aliases = ["ceedev.co.uk", "www.ceedev.co.uk"]
 
   origin {
     #cloudfront distribution to the alb
     domain_name = aws_lb.main.dns_name # ALB
     origin_id   = "alb-origin"
-   
+
 
     custom_origin_config {
       http_port              = 80
@@ -40,10 +40,10 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
   web_acl_id = aws_wafv2_web_acl.cloudfront.arn
 
   default_cache_behavior {
-    target_origin_id          = "alb-origin"
-    allowed_methods           = ["GET", "HEAD", "OPTIONS"]
-    cached_methods            = ["GET", "HEAD"]
-    viewer_protocol_policy    = "redirect-to-https"
+    target_origin_id           = "alb-origin"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = "redirect-to-https"
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
   }
 
