@@ -78,6 +78,8 @@ There is **no default** for this variable so your address is not stored in the r
 - Added **`alb_allowed_ingress_cidrs`** (required; set via gitignored **`terraform.tfvars`**, see **`terraform.tfvars.example`**).
 - Removed the unused **`parameter_group_name`** variable (RDS now uses the managed parameter group resource in `database.tf`).
 
+removed the kms bucket encryption for s3 since it is not supported by the s3 server access log delivery.
+
 ---
 
 ## Operational notes
