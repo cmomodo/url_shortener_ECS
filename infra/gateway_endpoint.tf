@@ -3,6 +3,7 @@ resource "aws_s3_bucket" "alb_logs" {
   force_destroy = false
 
   #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
+  #checkov:skip=CKV_AWS_145: ALB access log delivery requires S3-managed encryption, not KMS
 }
 
 resource "aws_s3_bucket_versioning" "alb_logs" {
@@ -26,8 +27,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.app.arn
+      # ALB access log delivery only supports S3-managed encryption keys.
+      sse_algorithm = "AES256"
     }
   }
 }
@@ -60,6 +61,7 @@ resource "aws_s3_bucket" "alb_logs_access" {
   force_destroy = true
 
   #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
+  #checkov:skip=CKV_AWS_145: S3 server access log delivery requires S3-managed encryption, not KMS
 }
 
 resource "aws_s3_bucket_versioning" "alb_logs_access" {
@@ -88,8 +90,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs_access" 
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.app.arn
+      # S3 server access log delivery only supports S3-managed encryption keys.
+      sse_algorithm = "AES256"
     }
   }
 }
@@ -117,32 +119,26 @@ resource "aws_s3_bucket_logging" "alb_logs" {
   target_prefix = "s3-access-logs/"
 }
 
-# ALB access logging for us-east-1 (ELB service account 127311923021).
+# ALB access logging requires the Elastic Load Balancing log delivery service.
 resource "aws_s3_bucket_policy" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowELBRootAccount"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::127311923021:root"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.alb_logs.arn}/alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
-      },
-      {
         Sid    = "AllowELBLogDeliveryPut"
         Effect = "Allow"
         Principal = {
-          Service = "delivery.logs.amazonaws.com"
+          Service = "logdelivery.elasticloadbalancing.amazonaws.com"
         }
         Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.alb_logs.arn}/alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
         Condition = {
           StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
           }
         }
       },
@@ -150,10 +146,18 @@ resource "aws_s3_bucket_policy" "alb_logs" {
         Sid    = "AllowELBLogDeliveryAcl"
         Effect = "Allow"
         Principal = {
-          Service = "delivery.logs.amazonaws.com"
+          Service = "logdelivery.elasticloadbalancing.amazonaws.com"
         }
         Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.alb_logs.arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
+          }
+        }
       }
     ]
   })
@@ -365,7 +369,7 @@ resource "aws_iam_role_policy" "firehose_waf_logs" {
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
-  name        = "url-shortener-waf-logs"
+  name        = "aws-waf-logs-url-shortener"
   destination = "extended_s3"
 
   server_side_encryption {
