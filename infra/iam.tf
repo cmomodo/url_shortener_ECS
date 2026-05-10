@@ -1,19 +1,22 @@
 #cloudwatch log groups
 resource "aws_cloudwatch_log_group" "api" {
+  #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/api"
-  retention_in_days = 365
+  retention_in_days = 30
   kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "dashboard" {
+  #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/dashboard"
-  retention_in_days = 365
+  retention_in_days = 30
   kms_key_id        = aws_kms_key.app.arn
 }
 
 resource "aws_cloudwatch_log_group" "worker" {
+  #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/worker"
-  retention_in_days = 365
+  retention_in_days = 30
   kms_key_id        = aws_kms_key.app.arn
 }
 

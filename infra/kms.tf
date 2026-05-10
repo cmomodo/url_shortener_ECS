@@ -2,7 +2,7 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_kms_key" "app" {
   description             = "CMK for SSM parameters, CloudWatch Logs, and SQS"
-  deletion_window_in_days = 10
+  deletion_window_in_days = 7
   enable_key_rotation     = true
 
   policy = jsonencode({

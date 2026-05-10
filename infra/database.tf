@@ -46,6 +46,7 @@ resource "aws_db_instance" "url_shortener" {
   # Disposable / short-lived: no backups, no final snapshot, deletion protection off for easy teardown.
   #checkov:skip=CKV_AWS_133: Temporary environment — no automated RDS backups
   #checkov:skip=CKV_AWS_293: Temporary environment — deletion protection disabled
+  #checkov:skip=CKV_AWS_157: Testing environment — single-AZ to reduce cost
 
   depends_on = [aws_db_subnet_group.default]
 
@@ -71,7 +72,7 @@ resource "aws_db_instance" "url_shortener" {
   maintenance_window                    = "Mon:04:00-Mon:05:00"
   skip_final_snapshot                   = true
   deletion_protection                   = false
-  multi_az                              = true
+  multi_az                              = false
   auto_minor_version_upgrade            = true
   performance_insights_enabled          = true
   performance_insights_kms_key_id       = aws_kms_key.app.arn
