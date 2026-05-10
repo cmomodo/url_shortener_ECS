@@ -2,6 +2,7 @@
 resource "aws_cloudfront_distribution" "alb_distribution" {
   #checkov:skip=CKV2_AWS_47: AWSManagedRulesKnownBadInputsRuleSet (Log4JRCE) is configured in aws_wafv2_web_acl.cloudfront; Checkov cannot cross-reference the WAF rules statically
   #checkov:skip=CKV2_AWS_46: Origin is an ALB, not an S3 bucket; Origin Access Control is not applicable to ALB origins
+  #checkov:skip=CKV_AWS_310: Single-origin dev distribution; no secondary origin exists for failover
   #accept traffic from these domains
   aliases = ["ceedev.co.uk", "www.ceedev.co.uk"]
 
@@ -16,22 +17,6 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
       https_port             = 443
       origin_protocol_policy = "https-only" # or "match-viewer"
       origin_ssl_protocols   = ["TLSv1.2"]
-    }
-  }
-  #failover suggestion from checkov 
-  origin_group {
-    origin_id = "alb-origin"
-
-    failover_criteria {
-      status_codes = [403, 404, 500, 502, 503, 504]
-    }
-
-    member {
-      origin_id = "alb-origin"
-    }
-
-    member {
-      origin_id = "alb-origin"
     }
   }
   enabled             = true
