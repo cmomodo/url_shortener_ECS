@@ -62,6 +62,7 @@ resource "aws_vpc_security_group_egress_rule" "rds_service_https" {
 
 #security group for the ecs tasks
 resource "aws_security_group" "ecs_tasks" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to ECS services in the ECS module.
   name        = "url-shortener-ecs-tasks"
   description = "Ingress from ALB; egress for AWS APIs, Postgres, and Redis"
   vpc_id      = data.aws_vpc.main.id
@@ -105,6 +106,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_tasks_redis" {
 
 #dashboard security group
 resource "aws_security_group" "dashboard_tasks" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to ECS services in the ECS module.
   name        = "url-shortener-dashboard-tasks"
   description = "Ingress from ALB; egress for AWS APIs, Postgres, and Redis"
   vpc_id      = data.aws_vpc.main.id
@@ -148,6 +150,7 @@ resource "aws_vpc_security_group_egress_rule" "dashboard_tasks_redis" {
 
 #worker task security group
 resource "aws_security_group" "worker_tasks" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to ECS services in the ECS module.
   name        = "url-shortener-worker-tasks"
   description = "Worker egress for AWS APIs, Postgres, Redis, and SQS"
   vpc_id      = data.aws_vpc.main.id
@@ -181,6 +184,7 @@ resource "aws_vpc_security_group_egress_rule" "worker_tasks_redis" {
 }
 
 resource "aws_security_group" "vpce_interface" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to VPC Endpoints in endpoint.tf in the root module.
   name        = "url-shortener-vpce-interface"
   description = "Allow ECS tasks to reach interface endpoints over HTTPS"
   vpc_id      = data.aws_vpc.main.id
@@ -238,6 +242,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 
 #security group for alb
 resource "aws_security_group" "alb" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to the ALB in the ECS module.
   name        = "url-shortener-alb"
   description = "Web traffic to the application load balancer (ingress from CloudFront only)"
   vpc_id      = data.aws_vpc.main.id

@@ -126,6 +126,7 @@ resource "aws_s3_bucket" "cloudfront_logs" {
 # CloudFront standard logging uses canned ACLs. Object Ownership must NOT be "Bucket owner
 # enforced" (that disables all ACLs). BucketOwnerPreferred keeps ACLs enabled for the bucket.
 resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
+  #checkov:skip=CKV2_AWS_65: CloudFront Standard Logging requires ACLs to be enabled (BucketOwnerPreferred) to deliver logs.
   bucket = aws_s3_bucket.cloudfront_logs.id
 
   rule {
