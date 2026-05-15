@@ -19,25 +19,25 @@ output "private_route_table_id" {
 }
 
 output "alb_security_group_id" {
-  value       = aws_security_group.alb.id
+  value = aws_security_group.alb.id
 }
 
 output "ecs_tasks_security_group_id" {
-  value       = aws_security_group.ecs_tasks.id
+  value = aws_security_group.ecs_tasks.id
 }
 
 output "dashboard_tasks_security_group_id" {
-  value       = aws_security_group.dashboard_tasks.id
+  value = aws_security_group.dashboard_tasks.id
 }
 
 output "worker_tasks_security_group_id" {
-  value       = aws_security_group.worker_tasks.id
+  value = aws_security_group.worker_tasks.id
 }
 
 output "vpce_interface_security_group_id" {
-  value       = aws_security_group.vpce_interface.id
+  value = aws_security_group.vpce_interface.id
 }
 
 output "rds_security_group_id" {
-  value       = aws_security_group.rds_service.id
+  value = aws_security_group.rds_service.id
 }
