@@ -63,7 +63,7 @@ resource "aws_db_instance" "url_shortener" {
   password               = var.db_password
   parameter_group_name   = aws_db_parameter_group.url_shortener.name
   db_subnet_group_name   = aws_db_subnet_group.default.name
-  vpc_security_group_ids = [aws_security_group.rds_service.id]
+  vpc_security_group_ids = [module.vpc.rds_security_group_id]
   publicly_accessible    = var.public_accessible
 
   copy_tags_to_snapshot = true
@@ -89,7 +89,7 @@ resource "aws_db_instance" "url_shortener" {
 # Database subnets come from the VPC layer and are created before RDS.
 resource "aws_db_subnet_group" "default" {
   name       = "main-v2"
-  subnet_ids = aws_subnet.private_blocks[*].id
+  subnet_ids = module.vpc.private_subnet_ids
 
   tags = {
     Name = "My DB subnet group"

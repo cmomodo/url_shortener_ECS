@@ -1,14 +1,3 @@
-variable "alb_allowed_ingress_cidrs" {
-  type        = list(string)
-  description = "IPv4 CIDRs allowed to reach the ALB on ports 80 and 443. Set in terraform.tfvars (see terraform.tfvars.example); do not commit real addresses. Use [\"0.0.0.0/0\"] only if you accept a public ALB."
-}
-
-variable "private_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
-  default     = ["172.31.96.0/24", "172.31.97.0/24"]
-}
-
 variable "identifier" {
   type        = string
   description = "The name of the AWS RDS instance"

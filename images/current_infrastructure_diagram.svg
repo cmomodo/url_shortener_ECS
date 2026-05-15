@@ -1,0 +1,213 @@
+<svg width="1800" height="1120" viewBox="0 0 1800 1120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="100" y1="60" x2="1650" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F8FC"/>
+      <stop offset="1" stop-color="#EEF3FA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.10"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.07"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#44546A"/>
+    </marker>
+    <style>
+      .h1 { font: 700 46px 'SF Pro Display', 'Segoe UI', sans-serif; fill: #0F172A; }
+      .h2 { font: 700 22px 'SF Pro Display', 'Segoe UI', sans-serif; fill: #0F172A; }
+      .h3 { font: 700 17px 'SF Pro Text', 'Segoe UI', sans-serif; fill: #0F172A; }
+      .meta { font: 500 18px 'SF Pro Text', 'Segoe UI', sans-serif; fill: #516079; }
+      .small { font: 500 14px 'SF Pro Text', 'Segoe UI', sans-serif; fill: #5F6F87; }
+      .tiny { font: 700 12px 'SF Pro Text', 'Segoe UI', sans-serif; fill: #6B7C95; letter-spacing: 0.10em; text-transform: uppercase; }
+      .wire { fill: none; stroke: #516079; stroke-width: 4; marker-end: url(#arrow); }
+      .wire2 { fill: none; stroke: #7C8CA4; stroke-width: 3; stroke-dasharray: 10 10; marker-end: url(#arrow); }
+    </style>
+
+    <symbol id="i-ecr" viewBox="0 0 16 16">
+      <path fill="currentColor" d="M7.19911441,7.53415901 C7.00114269,7.65001998 6.87816026,7.86476229 6.87816026,8.09448662 L6.87816026,14.7544946 L1.99985716,12.0297643 L1.99985716,5.37075509 L7.78903014,2.03276069 L12.6123411,4.41190571 L7.19911441,7.53415901 Z M13.9981431,4.38893328 C13.9981431,4.15421494 13.8711613,3.93647623 13.6411941,3.80663204 L7.95500643,1 L7.55506356,1.01398322 L1.32095415,4.6086696 C1.12298243,4.72453056 1,4.93927287 1,5.1679984 L1,12.2365162 C1,12.4672393 1.12498215,12.6829804 1.32995286,12.800839 L6.90315669,15.9131043 C7.00414227,15.9710348 7.11612627,16 7.22811027,16 C7.34109413,16 7.45307813,15.9710348 7.55306385,15.9141031 C7.75303528,15.7982421 7.87801743,15.5834998 7.87801743,15.3527767 L7.87801743,8.29624451 L13.6681903,4.9572513 C13.8711613,4.84039153 13.9981431,4.62265282 13.9981431,4.38893328 L13.9981431,4.38893328 Z M14.0001428,11.7780663 L9.99871447,14.6705953 L9.99871447,12.5271674 L11.9574347,11.140831 L11.9904299,10.9330803 C11.9964291,10.894127 12.0004285,10.894127 12.0004285,10.7163404 L12.0004285,8.28126249 L14.0001428,7.18557731 L14.0001428,11.7780663 Z M14.6250536,6.14982022 C14.3890873,6.00799041 14.104128,6.0009988 13.8611627,6.12884539 L11.4695044,7.43128246 C11.1795458,7.58409908 11.0005713,7.88174191 11.0005713,8.20834998 L11.0025711,10.5934878 L9.2978146,11.7990412 C9.11284102,11.9188973 8.99885731,12.1256492 8.99885731,12.3463843 L8.99885731,15.3497803 C8.99885731,15.5815022 9.12383945,15.7982421 9.3258106,15.9141031 C9.42079703,15.9680384 9.52678189,15.9970036 9.63676618,15.9970036 C9.76174832,15.9970036 9.8907299,15.9610467 10.0187116,15.8851378 L14.6730467,12.5211746 C14.874018,12.4053136 15,12.1895725 15,11.9568518 L15,6.81302437 C15,6.53935278 14.8590201,6.29165002 14.6250536,6.14982022 L14.6250536,6.14982022 Z"/>
+    </symbol>
+    <symbol id="i-ecs" viewBox="0 0 16 16">
+      <path fill="currentColor" d="m 10.206595,12.524899 h 3 v -1 h -3 z m 0,-4.9999999 h 3 v -1 h -3 z M 7.2065949,11.524899 h 1 v 1 h -1 z m -0.5,2 h 2 c 0.276,0 0.5,-0.224 0.5,-0.5 v -2 c 0,-0.276 -0.224,-0.5 -0.5,-0.5 h -2 c -0.276,0 -0.5,0.224 -0.5,0.5 v 2 c 0,0.276 0.224,0.5 0.5,0.5 z m 0.5,-6.9999999 h 1 v 1 h -1 z m -0.5,2 h 2 c 0.276,0 0.5,-0.224 0.5,-0.5 v -2 c 0,-0.276 -0.224,-0.5 -0.5,-0.5 h -2 c -0.276,0 -0.5,0.224 -0.5,0.5 v 2 c 0,0.276 0.224,0.5 0.5,0.5 z m -4.5,3.9999999 h 1 v 1 h -1.5 c -0.276,0 -0.5,-0.224 -0.5,-0.5 V 1.0248991 c 0,-0.27600004 0.224,-0.50000004 0.5,-0.50000004 H 11.706595 c 0.276,0 0.5,0.224 0.5,0.50000004 v 1.5 h -1 v -1 H 2.2065949 Z m 3,2 V 4.5248991 H 14.206595 V 14.524899 Z M 14.706595,3.5248991 H 4.7065949 c -0.276,0 -0.5,0.224 -0.5,0.5 V 15.024899 c 0,0.276 0.224,0.5 0.5,0.5 H 14.706595 c 0.276,0 0.5,-0.224 0.5,-0.5 V 4.0248991 c 0,-0.276 -0.224,-0.5 -0.5,-0.5 z"/>
+    </symbol>
+    <symbol id="i-s3" viewBox="0 0 16 16">
+      <path fill="currentColor" d="M14.1589495,9.35357189 L14.1863657,9.18789562 C14.3488322,9.28090686 14.4818516,9.36422943 14.5864393,9.43398786 C14.4676358,9.41557938 14.3204006,9.38748224 14.1589495,9.35357189 L14.1589495,9.35357189 Z M7.92023855,7.79563364 C7.92023855,8.06207208 7.69278555,8.28006717 7.41253095,8.28006717 C7.13329177,8.28006717 6.90482335,8.06207208 6.90482335,7.79563364 C6.90482335,7.52822633 7.13329177,7.3112001 7.41253095,7.3112001 C7.69278555,7.3112001 7.92023855,7.52822633 7.92023855,7.79563364 L7.92023855,7.79563364 Z M12.3383101,14.1669035 C12.2519998,14.214378 12.064148,14.2812298 11.9067586,14.338393 L11.6417353,14.4352797 C11.3706194,14.5370107 11.0487328,14.6290531 10.6811525,14.7085002 C9.76118631,14.9109934 8.48785565,15.0311329 7.27748073,15.0311329 C3.47881247,15.0311329 2.51619886,14.4033071 2.48167475,14.1988761 L1.21037492,4.83477587 C2.62687912,5.52945356 5.07504516,5.8578995 7.41253095,5.8578995 C9.51139417,5.8578995 12.2956626,5.56045731 13.883772,4.819274 L13.1760276,9.10069758 C11.692506,8.66567627 9.92365274,7.88186281 8.87269801,7.40227361 C8.69093869,6.79188735 8.10910578,6.34233303 7.41253095,6.34233303 C6.57278258,6.34233303 5.88940815,6.9934117 5.88940815,7.79563364 C5.88940815,8.59688671 6.57278258,9.24893425 7.41253095,9.24893425 C8.01264133,9.24893425 8.52745684,8.91273737 8.77623356,8.43121044 C9.90639068,8.94083452 11.5869028,9.66360935 13.015592,10.0676269 L12.3383101,14.1669035 Z M7.41253095,1.96886707 C11.7442922,1.96886707 14.0878705,2.9919907 14.1152867,3.42022994 L14.111225,3.44348275 C14.0624851,3.87559747 11.7249993,4.88903242 7.41253095,4.88903242 C3.30416106,4.88903242 1.05400098,3.93954269 1.02150769,3.44057615 L1.01947686,3.42119881 C1.03775433,2.92417 3.29096066,1.96886707 7.41253095,1.96886707 L7.41253095,1.96886707 Z M14.3569555,8.16089652 L15.1296865,3.50452138 L15.1296865,3.50355251 C15.1317173,3.47836197 15.135779,3.45510916 15.135779,3.42894975 C15.135779,1.64623434 10.5176706,1 7.41253095,1 C3.84233111,1 0,1.76056065 0,3.42894975 C0,3.45026482 0.0030462456,3.47061103 0.0040616608,3.49095724 L1.47742911,14.3393618 C1.54749276,14.7501615 1.76072995,16 7.27748073,16 C8.55995013,16 9.91756025,15.8711407 10.9086055,15.6531456 C11.3239103,15.5620721 11.6955523,15.4554967 12.0133772,15.3363261 L12.2662156,15.2442837 C12.7932161,15.0543857 13.3374786,14.8586746 13.3324016,14.3374241 L14.0005448,10.3117814 C14.4544354,10.4057615 14.8017074,10.4493605 15.0525149,10.4493605 C15.5216367,10.4493605 15.7003498,10.3185635 15.8242305,10.1780778 C15.9724811,10.0094949 16.0293443,9.79731301 15.9856815,9.58028678 C15.8973404,9.14817207 15.4282185,8.7354347 14.3569555,8.16089652 L14.3569555,8.16089652 Z"/>
+    </symbol>
+    <symbol id="i-cfn" viewBox="0 0 17 16">
+      <path fill="currentColor" d="M15.9021896,7.00049406 C15.9259346,8.40150722 14.6495847,10.1243751 13.0364469,10.0140017 L9.15384716,10.0140017 L9.15384716,8.9685982 L13.0364469,8.9685982 C13.0823138,8.9685982 14.8547412,8.77202585 14.8547412,6.96028402 C14.8547412,5.44012452 13.5835733,5.06008464 13.0397231,4.96507467 C12.8631194,4.93497071 12.7434457,4.76859513 12.7710742,4.59158721 C12.7710742,4.02900204 12.5682011,3.60408083 12.206001,3.39562173 C12.1463478,3.36128918 12.2691166,3.41785917 12.2010144,3.39562173 C11.7629219,3.24502939 11.0911007,3.31283099 10.8184556,3.6873544 C10.7432954,3.78991132 10.6155835,3.83971895 10.490835,3.81512643 C10.3720335,3.79698528 10.2727001,3.71525529 10.2320147,3.60217305 C10.0681765,3.10178048 9.67606753,2.6573381 9.31356558,2.27546375 C8.45968846,1.38006778 7.25432419,1.10454766 6.12365262,1.6069637 C5.48308354,1.90647167 5.05316471,2.42026694 4.76380386,3.06548323 L3.63649954,3.0714277 C3.84259463,2.07702784 4.65004049,1.12848449 5.54534001,0.678481978 C6.92095089,0.0722162863 8.94274191,0.370526546 9.98581643,1.45305088 C10.310357,1.78105753 10.6506499,2.26456172 10.8464549,2.68238386 C11.5964921,2.35065017 11.8972377,2.40777779 12.3507453,2.57930118 C13.0622051,2.83792079 13.5843708,3.42331291 13.5946464,4.18024989 C14.6495847,4.43251774 15.9021896,5.47705835 15.9021896,7.00049406 Z M6.98801157,6.04251384 L6.98801157,4.77038912 L1.20248881,4.77038912 L1.20248881,13.8260804 L6.98801157,13.8260804 L6.98801157,8.64425382 L8.01975674,8.64425382 L8.01975674,14.5414243 C8.01975674,14.7223642 7.87307601,14.8690449 7.69213616,14.8690449 L0.484483328,14.8690449 C0.303543476,14.8690449 0.156862745,14.7223642 0.156862745,14.5414243 L0.156862745,4.05756566 C0.156862745,3.87662581 0.303543476,3.72994507 0.484483328,3.72994507 L7.69213616,3.72994507 C7.87307601,3.72994507 8.01975674,3.87662581 8.01975674,4.05756566 L8.01975674,6.04251384 L6.98801157,6.04251384 Z M11.6235832,6.72926247 L2.16517692,6.72926247 L2.16517692,7.77355308 L11.6235832,7.77355308 L11.6235832,6.72926247 Z M5.76900333,9.29949499 L2.16517692,9.29949499 L2.16517692,10.3437856 L5.76900333,10.3437856 L5.76900333,9.29949499 Z M5.76900333,11.6730206 L2.16517692,11.6730206 L2.16517692,12.7173112 L5.76900333,12.7173112 L5.76900333,11.6730206 Z"/>
+    </symbol>
+    <symbol id="i-db" viewBox="0 0 15 12">
+      <path fill="currentColor" d="M13.5 1H6.70996L5.85999 0.150024L5.51001 0H0.51001L0.0100098 0.5V4.5V11.5L0.51001 12H13.51L14.01 11.5V7V1.5L13.5 1ZM12.99 9.48999V11H0.98999V9.48999V5.48999V5H5.47998L5.82996 4.84998L6.68994 3.98999H13V5.48999L12.99 9.48999ZM12.99 3H6.48999L6.14001 3.15002L5.28003 4.01001H1V1.01001H5.29004L6.14001 1.85999L6.5 2.01001H13L12.99 3Z"/>
+    </symbol>
+    <symbol id="i-schema" viewBox="0 0 16 16">
+      <rect fill="currentColor" x="2" y="2" width="5" height="3"/>
+      <rect fill="currentColor" x="8" y="2" width="6" height="5"/>
+      <rect fill="currentColor" x="2" y="6" width="5" height="3"/>
+      <rect fill="currentColor" x="2" y="10" width="5" height="4"/>
+      <path fill="currentColor" d="M14,8 L14,14 L8,14 L8,8 L14,8 Z M13,9 L9,9 L9,13 L13,13 L13,9 Z"/>
+    </symbol>
+  </defs>
+
+  <rect width="1800" height="1120" rx="28" fill="url(#bg)"/>
+  <rect x="26" y="26" width="1748" height="1068" rx="28" stroke="#D6E0EF" stroke-width="2"/>
+
+  <text x="72" y="94" class="h1">URL Shortener AWS Infrastructure</text>
+  <text x="72" y="128" class="meta">Professional reference view based on the current Terraform and service implementation</text>
+
+  <rect x="72" y="170" width="1656" height="108" rx="24" fill="#FFFFFF" filter="url(#shadow)"/>
+  <text x="104" y="214" class="tiny">Request Path</text>
+  <text x="104" y="246" class="h2">Internet -> Route 53 -> CloudFront -> WAF -> ALB -> ECS services -> Data services</text>
+  <text x="104" y="270" class="small">Analytics side path: API publishes click events to SQS, worker consumes and writes aggregates to PostgreSQL.</text>
+
+  <rect x="72" y="320" width="356" height="360" rx="28" fill="#FFFFFF" filter="url(#shadow)"/>
+  <text x="104" y="366" class="h2">Edge Services</text>
+
+  <rect x="104" y="394" width="292" height="78" rx="20" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="124" y="412" width="42" height="42" rx="12" fill="#7C3AED"/>
+  <text x="145" y="439" text-anchor="middle" class="h3" fill="#FFFFFF">53</text>
+  <text x="182" y="430" class="h3">Amazon Route 53</text>
+  <text x="182" y="451" class="small">Apex, www, origin aliases</text>
+
+  <rect x="104" y="490" width="292" height="78" rx="20" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="124" y="508" width="42" height="42" rx="12" fill="#2563EB"/>
+  <text x="145" y="439" opacity="0">.</text>
+  <text x="145" y="535" text-anchor="middle" class="h3" fill="#FFFFFF">CF</text>
+  <text x="182" y="526" class="h3">Amazon CloudFront</text>
+  <text x="182" y="547" class="small">Public edge and default root /ui</text>
+
+  <rect x="104" y="586" width="140" height="78" rx="20" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="124" y="604" width="42" height="42" rx="12" fill="#EF4444"/>
+  <text x="145" y="631" text-anchor="middle" class="h3" fill="#FFFFFF">WAF</text>
+  <text x="182" y="622" class="h3">AWS WAF</text>
+  <text x="182" y="643" class="small">Managed rules</text>
+
+  <rect x="256" y="586" width="140" height="78" rx="20" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="276" y="604" width="42" height="42" rx="12" fill="#10B981"/>
+  <text x="297" y="631" text-anchor="middle" class="h3" fill="#FFFFFF">ACM</text>
+  <text x="334" y="622" class="h3">ACM</text>
+  <text x="334" y="643" class="small">TLS certs</text>
+
+  <rect x="464" y="320" width="1264" height="640" rx="30" fill="#FFFFFF" filter="url(#shadow)"/>
+  <text x="500" y="366" class="h2">Amazon VPC</text>
+  <text x="500" y="392" class="small">Private workloads, public ingress, managed data plane, and endpoint-based AWS access without NAT</text>
+
+  <rect x="500" y="424" width="560" height="186" rx="26" fill="#E9F5FF" stroke="#B6DCFF" stroke-width="2"/>
+  <text x="532" y="468" class="tiny">Public Subnets</text>
+  <rect x="532" y="496" width="496" height="82" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="554" y="516" width="42" height="42" rx="12" fill="#F59E0B"/>
+  <text x="575" y="543" text-anchor="middle" class="h3" fill="#FFFFFF">ALB</text>
+  <text x="612" y="532" class="h3">Application Load Balancer</text>
+  <text x="612" y="553" class="small">443 listener, API default target, analytics path routing</text>
+
+  <rect x="500" y="640" width="560" height="284" rx="26" fill="#EEFCE5" stroke="#B8EA8D" stroke-width="2"/>
+  <text x="532" y="684" class="tiny">Private App Subnets</text>
+
+  <rect x="532" y="716" width="496" height="176" rx="24" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <text x="564" y="754" class="h3">Amazon ECS Cluster on AWS Fargate</text>
+
+  <rect x="564" y="778" width="134" height="84" rx="18" fill="#FFF7ED" stroke="#FED7AA"/>
+  <rect x="582" y="794" width="34" height="34" rx="10" fill="#ED7100"/>
+  <use href="#i-ecs" x="591" y="803" width="16" height="16" fill="#FFFFFF"/>
+  <text x="628" y="810" class="h3">API</text>
+  <text x="582" y="838" class="small">FastAPI</text>
+  <text x="582" y="856" class="small">:8080</text>
+
+  <rect x="714" y="778" width="134" height="84" rx="18" fill="#FFF7ED" stroke="#FED7AA"/>
+  <rect x="732" y="794" width="34" height="34" rx="10" fill="#ED7100"/>
+  <use href="#i-ecs" x="741" y="803" width="16" height="16" fill="#FFFFFF"/>
+  <text x="778" y="810" class="h3">Dashboard</text>
+  <text x="732" y="838" class="small">Go API</text>
+  <text x="732" y="856" class="small">:8081</text>
+
+  <rect x="864" y="778" width="134" height="84" rx="18" fill="#FFF7ED" stroke="#FED7AA"/>
+  <rect x="882" y="794" width="34" height="34" rx="10" fill="#ED7100"/>
+  <use href="#i-ecs" x="891" y="803" width="16" height="16" fill="#FFFFFF"/>
+  <text x="928" y="810" class="h3">Worker</text>
+  <text x="882" y="838" class="small">Go poller</text>
+  <text x="882" y="856" class="small">:8090</text>
+
+  <rect x="1094" y="424" width="598" height="500" rx="26" fill="#F9FBFE" stroke="#D8E1EE" stroke-width="2"/>
+  <text x="1128" y="468" class="tiny">Managed Data and Integration Services</text>
+
+  <rect x="1128" y="498" width="246" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1148" y="518" width="40" height="40" rx="12" fill="#2563EB"/>
+  <use href="#i-db" x="1159" y="531" width="18" height="14" fill="#FFFFFF"/>
+  <text x="1202" y="530" class="h3">Amazon RDS</text>
+  <text x="1202" y="551" class="small">Primary PostgreSQL runtime store</text>
+  <text x="1202" y="570" class="small">URLs and analytics tables</text>
+
+  <rect x="1398" y="498" width="260" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1418" y="518" width="40" height="40" rx="12" fill="#DC2626"/>
+  <text x="1438" y="544" text-anchor="middle" class="h3" fill="#FFFFFF">R</text>
+  <text x="1472" y="530" class="h3">ElastiCache</text>
+  <text x="1472" y="551" class="small">Redis cache for short-code lookups</text>
+  <text x="1472" y="570" class="small">Accelerates API read path</text>
+
+  <rect x="1128" y="620" width="246" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1148" y="640" width="40" height="40" rx="12" fill="#8B5CF6"/>
+  <text x="1168" y="666" text-anchor="middle" class="h3" fill="#FFFFFF">Q</text>
+  <text x="1202" y="652" class="h3">Amazon SQS</text>
+  <text x="1202" y="673" class="small">Primary queue and DLQ</text>
+  <text x="1202" y="692" class="small">API publish, worker consume</text>
+
+  <rect x="1398" y="620" width="260" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1418" y="640" width="40" height="40" rx="12" fill="#0EA5E9"/>
+  <use href="#i-schema" x="1429" y="651" width="18" height="18" fill="#FFFFFF"/>
+  <text x="1472" y="652" class="h3">Amazon DynamoDB</text>
+  <text x="1472" y="673" class="small">Provisioned in Terraform</text>
+  <text x="1472" y="692" class="small">Fallback when Postgres is not selected</text>
+
+  <rect x="1128" y="742" width="246" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1148" y="762" width="40" height="40" rx="12" fill="#14B8A6"/>
+  <text x="1168" y="788" text-anchor="middle" class="h3" fill="#FFFFFF">SSM</text>
+  <text x="1202" y="774" class="h3">Systems Manager</text>
+  <text x="1202" y="795" class="small">Parameter Store for DB, Redis, SQS URLs</text>
+
+  <rect x="1398" y="742" width="260" height="92" rx="22" fill="#FFFFFF" stroke="#D8E1EE" filter="url(#soft)"/>
+  <rect x="1418" y="762" width="40" height="40" rx="12" fill="#334155"/>
+  <text x="1438" y="788" text-anchor="middle" class="h3" fill="#FFFFFF">K</text>
+  <text x="1472" y="774" class="h3">KMS + VPC Endpoints</text>
+  <text x="1472" y="795" class="small">Private access to ECR, S3, Logs, SSM, SQS, KMS</text>
+
+  <rect x="72" y="714" width="356" height="246" rx="28" fill="#FFFFFF" filter="url(#shadow)"/>
+  <text x="104" y="760" class="h2">Delivery and Platform</text>
+
+  <rect x="104" y="790" width="292" height="68" rx="18" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="124" y="807" width="34" height="34" rx="10" fill="#111827"/>
+  <text x="141" y="830" text-anchor="middle" class="h3" fill="#FFFFFF">Tf</text>
+  <text x="172" y="825" class="h3">Terraform</text>
+  <text x="172" y="845" class="small">Provisions VPC, ECS, data, and edge stack</text>
+
+  <rect x="104" y="872" width="140" height="68" rx="18" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="124" y="889" width="34" height="34" rx="10" fill="#ED7100"/>
+  <use href="#i-ecr" x="133" y="898" width="16" height="16" fill="#FFFFFF"/>
+  <text x="172" y="907" class="h3">Amazon ECR</text>
+  <text x="172" y="927" class="small">api, dashboard, worker</text>
+
+  <rect x="256" y="872" width="140" height="68" rx="18" fill="#F8FAFD" stroke="#D8E1EE"/>
+  <rect x="276" y="889" width="34" height="34" rx="10" fill="#16A34A"/>
+  <use href="#i-s3" x="285" y="898" width="16" height="16" fill="#FFFFFF"/>
+  <text x="324" y="907" class="h3">Amazon S3</text>
+  <text x="324" y="927" class="small">Remote state and log buckets</text>
+
+  <path d="M396 433H500" class="wire"/>
+  <path d="M396 529H500" class="wire"/>
+  <path d="M244 625H256" class="wire"/>
+  <path d="M396 625H532V537" class="wire"/>
+  <path d="M780 578V716" class="wire"/>
+  <path d="M1028 812H1128" class="wire"/>
+  <path d="M698 820H864" class="wire"/>
+  <path d="M632 862V912H1252V590" class="wire"/>
+  <path d="M631 820H1252V620" class="wire"/>
+  <path d="M396 907H468V820H532" class="wire2"/>
+  <path d="M252 906H252V846H1128V788" class="wire2"/>
+
+  <text x="1088" y="804" class="small">click events</text>
+  <text x="760" y="646" class="small">HTTP routing</text>
+  <text x="886" y="800" class="small">event flow</text>
+  <text x="418" y="894" class="small">image push</text>
+  <text x="264" y="868" class="small">state and logs</text>
+
+  <rect x="72" y="992" width="1656" height="72" rx="20" fill="#FFFFFF" filter="url(#soft)"/>
+  <text x="104" y="1035" class="small">Local runtime mirror in docker-compose: Postgres, Redis, API, worker, and dashboard. Production adds Route 53, CloudFront, WAF, ALB, ECS Fargate, VPC endpoints, and AWS-managed security controls.</text>
+</svg>

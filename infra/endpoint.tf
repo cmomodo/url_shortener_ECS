@@ -1,6 +1,7 @@
 data "aws_region" "current" {}
 
 locals {
+  #interface endpoint services
   interface_endpoint_services = {
     ecr_api = "ecr.api"
     ecr_dkr = "ecr.dkr"
@@ -10,14 +11,15 @@ locals {
   }
 }
 
+#creating the vpc endpoint for each interface endpoint service
 resource "aws_vpc_endpoint" "interface" {
   for_each = local.interface_endpoint_services
 
-  vpc_id              = data.aws_vpc.main.id
+  vpc_id              = module.vpc.vpc_id
   service_name        = "com.amazonaws.${data.aws_region.current.region}.${each.value}"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private_blocks[*].id
-  security_group_ids  = [aws_security_group.vpce_interface.id]
+  subnet_ids          = module.vpc.private_subnet_ids
+  security_group_ids  = [module.vpc.vpce_interface_security_group_id]
   private_dns_enabled = true
 
   tags = {
@@ -25,25 +27,25 @@ resource "aws_vpc_endpoint" "interface" {
   }
 }
 
-#gateway endpoint for s3 
+#gateway endpoint for s3
 resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = data.aws_vpc.main.id
+  vpc_id            = module.vpc.vpc_id
   service_name      = "com.amazonaws.${data.aws_region.current.region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.private.id]
+  route_table_ids   = [module.vpc.private_route_table_id]
 
   tags = {
     Name = "url-shortener-s3-endpoint"
   }
 }
 
-#kms decrytion 
+#kms decrytion
 resource "aws_vpc_endpoint" "kms" {
-  vpc_id              = data.aws_vpc.main.id
+  vpc_id              = module.vpc.vpc_id
   service_name        = "com.amazonaws.${data.aws_region.current.region}.kms"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private_blocks[*].id
-  security_group_ids  = [aws_security_group.vpce_interface.id]
+  subnet_ids          = module.vpc.private_subnet_ids
+  security_group_ids  = [module.vpc.vpce_interface_security_group_id]
   private_dns_enabled = true
 
   tags = {

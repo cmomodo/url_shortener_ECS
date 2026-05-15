@@ -16,5 +16,5 @@ resource "aws_ssm_parameter" "redis_url" {
   name   = "/url-shortener/redis_url"
   type   = "SecureString"
   key_id = aws_kms_key.app.id
-  value  = "redis://${aws_elasticache_cluster.url_shortener.cache_nodes[0].address}:6379"
+  value  = "redis://${module.elasticcache.cache_node_address}:6379"
 }
