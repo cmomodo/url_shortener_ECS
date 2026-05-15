@@ -13,6 +13,12 @@ data "aws_iam_policy_document" "kms_key_policy" {
 
     actions   = ["kms:*"]
     resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
   }
 
   statement {
@@ -40,6 +46,12 @@ data "aws_iam_policy_document" "kms_key_policy" {
       variable = "kms:EncryptionContext:aws:logs:arn"
       values   = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:*"]
     }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
   }
 
   statement {
@@ -58,6 +70,12 @@ data "aws_iam_policy_document" "kms_key_policy" {
     ]
 
     resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
   }
 
   statement {
@@ -84,6 +102,12 @@ data "aws_iam_policy_document" "kms_key_policy" {
       test     = "StringEquals"
       variable = "kms:ViaService"
       values   = ["rds.${data.aws_region.current.region}.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
 }
