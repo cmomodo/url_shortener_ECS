@@ -1,27 +1,28 @@
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else. we have added rds and also 
+A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else. we have added rds and also adding a dashboard to view the analytics.
 
 ## Services
 
-| Service | Language | Port | Description |
-|---------|----------|------|-------------|
-| **api** | Python | 8080 | Shortens URLs, handles redirects, tracks clicks, publishes events to SQS |
-| **worker** | Go | - | Polls SQS for click events, writes analytics to PostgreSQL |
-| **dashboard** | Go | 8081 | Analytics API - top URLs, click stats, hourly breakdowns, recent events |
+| Service       | Language | Port | Description                                                              |
+| ------------- | -------- | ---- | ------------------------------------------------------------------------ |
+| **api**       | Python   | 8080 | Shortens URLs, handles redirects, tracks clicks, publishes events to SQS |
+| **worker**    | Go       | -    | Polls SQS for click events, writes analytics to PostgreSQL               |
+| **dashboard** | Go       | 8081 | Analytics API - top URLs, click stats, hourly breakdowns, recent events  |
 
 Read the code. Environment variables and endpoints are in the source files.
 
 ---
 
-## requisites 
+## requisites
 
-Docker 
-Terraform 
-AWS 
+Docker
+Terraform
+AWS
 
 # System Design
 
+<img src="Images/URL_shortener.png" alt="System Design" />
 
 ### Features
 
@@ -84,4 +85,5 @@ To smoke test the SQS publish path locally against default AWS, run:
 Use the default AWS endpoint for SQS testing.
 
 Everything else is on you. Commit small. Good luck.
+
 # url_shortener_ECS

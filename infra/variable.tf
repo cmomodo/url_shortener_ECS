@@ -1,9 +1,3 @@
-variable "private_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
-  default     = ["172.31.96.0/24", "172.31.97.0/24"]
-}
-
 variable "identifier" {
   type        = string
   description = "The name of the AWS RDS instance"
@@ -57,12 +51,6 @@ variable "db_password" {
   description = "The master password for the database"
   default     = "foobarbaz"
   sensitive   = true
-}
-
-variable "parameter_group_name" {
-  type        = string
-  description = "The database parameter group name"
-  default     = "default.postgres16"
 }
 
 variable "public_accessible" {
