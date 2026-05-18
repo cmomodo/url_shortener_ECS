@@ -1,11 +1,14 @@
 """
 Database abstraction layer.
 
-Supports two backends:
-  - DynamoDB (default): set TABLE_NAME env var
-  - PostgreSQL (RDS):   set DATABASE_URL env var (e.g. postgresql://user:pass@host:5432/dbname)
+The AWS deployment uses PostgreSQL by setting DATABASE_URL. A DynamoDB backend
+is kept for experiments, but the worker and dashboard currently expect the
+PostgreSQL schema.
 
-The backend is selected automatically based on which env var is set.
+Backend selection:
+  - PostgreSQL (RDS): set DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname)
+  - DynamoDB:         set TABLE_NAME
+
 If both are set, DATABASE_URL takes precedence.
 """
 

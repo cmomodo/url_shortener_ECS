@@ -1,6 +1,6 @@
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The application code is provided. You build everything else. we have added rds and also adding a dashboard to view the analytics.
+A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics.
 
 ## Services
 
@@ -14,7 +14,7 @@ Read the code. Environment variables and endpoints are in the source files.
 
 ---
 
-## requisites
+## Requisites
 
 Docker
 Terraform
@@ -28,7 +28,7 @@ AWS
 
 - ECS Fargate - three separate services, one cluster
 - Application Load Balancer with WAF routing to the correct service
-- Database: DynamoDB or RDS PostgreSQL - you choose, you justify
+- Database: RDS PostgreSQL, selected for the shared URL and analytics schema
 - ElastiCache Redis (caching layer for the API)
 - SQS queue (click events from API to worker)
 - VPC with private subnets. No NAT gateways.
@@ -39,6 +39,22 @@ AWS
 - Multi-stage Docker builds
 
 Terraform uses an S3 backend for remote state, configured in [`infra/state.tf`](/Users/momodou/Documents/projects/Coderco_Projects/url-shortener-main/infra/state.tf). Create the backend bucket once before running `terraform init`, or `init` will fail until the bucket exists.
+
+### Database Decision
+
+This deployment uses **RDS PostgreSQL** because all three services can share one relational data model:
+
+- The API writes URL mappings to the `urls` table and increments click counts during redirects.
+- The worker consumes SQS click events and writes `click_events` plus hourly aggregates.
+- The dashboard queries `urls`, `click_events`, and `click_stats_hourly` with SQL ordering, filtering, and aggregation.
+
+RDS PostgreSQL is the lowest-risk fit for the current application because the worker and dashboard already require `DATABASE_URL` and use PostgreSQL SQL directly. A dev-sized single-AZ instance keeps the deployment simple and cost-conscious while preserving the query patterns needed by the analytics dashboard.
+
+**DynamoDB** would be a good alternative for the hot redirect lookup path because `short_code -> url` is a simple key-value access pattern and on-demand billing can be cheaper at low or spiky traffic. It is not the active deployment choice here because the analytics worker and dashboard would need to be rewritten around DynamoDB-specific access patterns for recent clicks, hourly stats, and top URLs.
+
+**Aurora PostgreSQL** is a better fit when the app needs production-grade database scaling, read replicas, or higher availability than a small RDS instance. For this dev-sized ECS project, that added baseline cost and complexity is not justified.
+
+**Aurora DSQL** is a promising serverless distributed SQL option, but it is aimed at active-active and distributed SQL workloads. This service does not currently need multi-region writes or distributed transaction scale, so DSQL would add novelty and migration risk without solving a current problem.
 
 ### The Deployment Question
 
