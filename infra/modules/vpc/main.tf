@@ -38,26 +38,68 @@ resource "aws_route_table_association" "private" {
 # RDS security group inside the VPC layer.
 resource "aws_security_group" "rds_service" {
   name        = "rds-service"
-  description = "Allow database connections inside the default VPC"
+  description = "PostgreSQL from ECS API, dashboard, and worker tasks only"
   vpc_id      = data.aws_vpc.main.id
 }
 
-resource "aws_vpc_security_group_ingress_rule" "rds_service_postgres" {
-  security_group_id = aws_security_group.rds_service.id
-  description       = "PostgreSQL from the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 5432
-  to_port           = 5432
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+resource "aws_vpc_security_group_ingress_rule" "rds_service_postgres_from_api" {
+  security_group_id            = aws_security_group.rds_service.id
+  description                  = "PostgreSQL from API tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.ecs_tasks.id
 }
 
-resource "aws_vpc_security_group_egress_rule" "rds_service_https" {
-  security_group_id = aws_security_group.rds_service.id
-  description       = "HTTPS for RDS maintenance and patching"
-  ip_protocol       = "tcp"
-  from_port         = 443
-  to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
+resource "aws_vpc_security_group_ingress_rule" "rds_service_postgres_from_dashboard" {
+  security_group_id            = aws_security_group.rds_service.id
+  description                  = "PostgreSQL from dashboard tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.dashboard_tasks.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "rds_service_postgres_from_worker" {
+  security_group_id            = aws_security_group.rds_service.id
+  description                  = "PostgreSQL from worker tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.worker_tasks.id
+}
+
+resource "aws_security_group" "elasticache" {
+  name        = "url-shortener-elasticache"
+  description = "Redis from ECS API, dashboard, and worker tasks only"
+  vpc_id      = data.aws_vpc.main.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "elasticache_redis_from_api" {
+  security_group_id            = aws_security_group.elasticache.id
+  description                  = "Redis from API tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.ecs_tasks.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "elasticache_redis_from_dashboard" {
+  security_group_id            = aws_security_group.elasticache.id
+  description                  = "Redis from dashboard tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.dashboard_tasks.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "elasticache_redis_from_worker" {
+  security_group_id            = aws_security_group.elasticache.id
+  description                  = "Redis from worker tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.worker_tasks.id
 }
 
 #security group for the ecs tasks
@@ -87,21 +129,21 @@ resource "aws_vpc_security_group_egress_rule" "ecs_tasks_https" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_tasks_postgres" {
-  security_group_id = aws_security_group.ecs_tasks.id
-  description       = "PostgreSQL to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 5432
-  to_port           = 5432
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.ecs_tasks.id
+  description                  = "PostgreSQL to RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.rds_service.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_tasks_redis" {
-  security_group_id = aws_security_group.ecs_tasks.id
-  description       = "Redis to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 6379
-  to_port           = 6379
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.ecs_tasks.id
+  description                  = "Redis to ElastiCache"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.elasticache.id
 }
 
 #dashboard security group
@@ -131,21 +173,21 @@ resource "aws_vpc_security_group_egress_rule" "dashboard_tasks_https" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "dashboard_tasks_postgres" {
-  security_group_id = aws_security_group.dashboard_tasks.id
-  description       = "PostgreSQL to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 5432
-  to_port           = 5432
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.dashboard_tasks.id
+  description                  = "PostgreSQL to RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.rds_service.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "dashboard_tasks_redis" {
-  security_group_id = aws_security_group.dashboard_tasks.id
-  description       = "Redis to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 6379
-  to_port           = 6379
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.dashboard_tasks.id
+  description                  = "Redis to ElastiCache"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.elasticache.id
 }
 
 #worker task security group
@@ -166,21 +208,21 @@ resource "aws_vpc_security_group_egress_rule" "worker_tasks_https" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "worker_tasks_postgres" {
-  security_group_id = aws_security_group.worker_tasks.id
-  description       = "PostgreSQL to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 5432
-  to_port           = 5432
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.worker_tasks.id
+  description                  = "PostgreSQL to RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.rds_service.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "worker_tasks_redis" {
-  security_group_id = aws_security_group.worker_tasks.id
-  description       = "Redis to the VPC"
-  ip_protocol       = "tcp"
-  from_port         = 6379
-  to_port           = 6379
-  cidr_ipv4         = data.aws_vpc.main.cidr_block
+  security_group_id            = aws_security_group.worker_tasks.id
+  description                  = "Redis to ElastiCache"
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  referenced_security_group_id = aws_security_group.elasticache.id
 }
 
 resource "aws_security_group" "vpce_interface" {
@@ -224,15 +266,6 @@ resource "aws_vpc_security_group_egress_rule" "vpce_interface_return_vpc" {
   from_port         = 1024
   to_port           = 65535
   cidr_ipv4         = data.aws_vpc.main.cidr_block
-}
-
-resource "aws_vpc_security_group_egress_rule" "vpce_interface_https_internet" {
-  security_group_id = aws_security_group.vpce_interface.id
-  description       = "HTTPS to the internet for AWS service backends"
-  ip_protocol       = "tcp"
-  from_port         = 443
-  to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
 }
 
 # AWS-managed prefix list for CloudFront origin-facing IPs — stays up to date automatically

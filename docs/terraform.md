@@ -86,6 +86,29 @@ Note that `force_destroy = false` on the ALB logs bucket — you will need to em
 
 If your `aws_kms_key.app` is configured with a deletion window, destroying it may schedule deletion rather than deleting instantly (AWS behavior). If destroy ever fails around KMS, the fix is usually "don't destroy the CMK in ephemeral environments" or accept the scheduled deletion window.
 
+## Terraform state bucket policy (SEC-3)
+
+The remote backend bucket (`my-27-state-bucket`, see `infra/state.tf`) is not created by this stack, but `infra/state_bucket_policy.tf` can attach a **bucket policy** to it:
+
+| Statement | Purpose |
+|-----------|---------|
+| **DenyInsecureTransport** | Rejects `s3:*` when `aws:SecureTransport` is false (TLS required). Always applied. |
+| **AllowTerraformStateAccess** | Allows `ListBucket`, `GetObject`, `PutObject`, `DeleteObject`, etc. for roles listed in `terraform_state_access_role_arns`. |
+| **DenyAccessNotFromAllowedRoles** | Optional explicit deny for everyone else when `terraform_state_enforce_allowlist = true`. |
+
+Configure in gitignored `terraform.tfvars` (see `terraform.tfvars.example`):
+
+```hcl
+terraform_state_access_role_arns = [
+  "arn:aws:iam::ACCOUNT_ID:role/your-github-actions-terraform-role",
+]
+terraform_state_enforce_allowlist = true
+```
+
+**Before enforcing the allowlist**, ensure every principal that runs `terraform plan/apply` (local laptop role, CI OIDC role) is in the list, or you will lock yourself out of state.
+
+Applies to both state keys: `global/s3/url-shortener.tfstate` and `global/s3/url-shortener-ecr.tfstate` in the same bucket.
+
 ## Notes
 
 - Deleting CloudWatch log groups **does not prevent recreation**. A later `terraform apply` will recreate them (but historical logs are gone once deleted).

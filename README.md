@@ -22,14 +22,14 @@ AWS
 
 # System Design
 
-<img src="Images/URL_shortener.png" alt="System Design" />
+![System Design](images/URL_shortener.png)
 
 ### Features
 
 - ECS Fargate - three separate services, one cluster
 - Application Load Balancer with WAF routing to the correct service
 - Database: RDS PostgreSQL, selected for the shared URL and analytics schema
-- ElastiCache Redis (caching layer for the API)
+- ElastiCache Redis (caching layer for the API; TLS, auth, and dedicated security groups — see [docs/elasticache.md](docs/elasticache.md))
 - SQS queue (click events from API to worker)
 - VPC with private subnets. No NAT gateways.
 - GitHub Actions with OIDC. No long-lived AWS credentials.

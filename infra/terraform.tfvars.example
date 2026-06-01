@@ -1,3 +1,12 @@
 # Copy to terraform.tfvars (gitignored) and replace with your public IPv4 /32.
 # Example uses TEST-NET-3 documentation address only — not routable on the internet.
 alb_allowed_ingress_cidrs = ["203.0.113.1/32"]
+
+# RDS password is ephemeral (not in Terraform state). To rotate, increment and apply:
+# db_password_wo_version = 2
+
+# Terraform state bucket policy (SEC-3). Add your CI/CD and human deploy role ARNs.
+# terraform_state_access_role_arns = [
+#   "arn:aws:iam::123456789012:role/github-actions-terraform",
+# ]
+# terraform_state_enforce_allowlist = true

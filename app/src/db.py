@@ -28,7 +28,11 @@ def _get_redis():
     if not redis_url:
         return None
     import redis
-    _redis = redis.from_url(redis_url, decode_responses=True)
+
+    kwargs = {"decode_responses": True}
+    if redis_url.startswith("rediss://"):
+        kwargs["ssl_cert_reqs"] = "required"
+    _redis = redis.from_url(redis_url, **kwargs)
     return _redis
 
 

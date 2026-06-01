@@ -190,6 +190,28 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     allow {}
   }
 
+  rule {
+    name     = "RateLimitGlobal"
+    priority = 0
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = var.waf_rate_limit
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitGlobal"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Blocks Log4Shell (CVE-2021-44228) and other known-bad inputs — fixes CKV_AWS_192 / CKV2_AWS_47
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"

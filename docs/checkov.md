@@ -63,7 +63,7 @@ There is **no default** for this variable so your address is not stored in the r
 
 ### `infra/ssm.tf`
 
-- All sensitive parameters use **`SecureString`** and the **app CMK** (`key_id`).
+- Secrets (`database_url`, `redis_url`) use **`SecureString`** and the **app CMK** (`key_id`). `sqs_queue_url` is **`String`** (endpoint only, not a secret).
 
 ### `infra/sqs.tf`
 
