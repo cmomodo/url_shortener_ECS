@@ -9,9 +9,10 @@ resource "aws_ssm_parameter" "database_url" {
 }
 
 resource "aws_ssm_parameter" "sqs_queue_url" {
-  name  = "/url-shortener/sqs_queue_url"
-  type  = "String"
-  value = aws_sqs_queue.terraform_queue.url
+  name   = "/url-shortener/sqs_queue_url"
+  type   = "SecureString"
+  key_id = aws_kms_key.app.id
+  value  = aws_sqs_queue.terraform_queue.url
 }
 
 resource "aws_ssm_parameter" "redis_url" {

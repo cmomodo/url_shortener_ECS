@@ -9,6 +9,7 @@ resource "aws_elasticache_subnet_group" "url_shortener" {
 }
 
 resource "aws_elasticache_replication_group" "url_shortener" {
+  #checkov:skip=CKV2_AWS_50: Dev environment keeps a single node (no Multi-AZ failover) to reduce baseline cost.
   replication_group_id = var.replication_group_id
   description          = "URL shortener Redis (TLS + auth)"
   engine               = var.engine
@@ -24,6 +25,7 @@ resource "aws_elasticache_replication_group" "url_shortener" {
   multi_az_enabled           = false
 
   at_rest_encryption_enabled = true
+  kms_key_id                 = var.kms_key_id
   transit_encryption_enabled = true
   transit_encryption_mode    = "required"
 

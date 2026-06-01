@@ -60,8 +60,8 @@ resource "aws_db_instance" "url_shortener" {
   kms_key_id             = aws_kms_key.app.arn
   db_name                = var.db_name
   username               = var.db_username
-  password_wo         = ephemeral.random_password.db_master.result
-  password_wo_version = var.db_password_wo_version
+  password_wo            = ephemeral.random_password.db_master.result
+  password_wo_version    = var.db_password_wo_version
   parameter_group_name   = aws_db_parameter_group.url_shortener.name
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [module.vpc.rds_security_group_id]

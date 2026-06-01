@@ -50,6 +50,11 @@ variable "auth_token" {
   sensitive   = true
 }
 
+variable "kms_key_id" {
+  type        = string
+  description = "KMS key ID or ARN for ElastiCache at-rest encryption"
+}
+
 variable "snapshot_window" {
   type        = string
   description = "Daily snapshot window (UTC)"

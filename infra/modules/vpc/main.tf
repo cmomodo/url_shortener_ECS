@@ -70,6 +70,7 @@ resource "aws_vpc_security_group_ingress_rule" "rds_service_postgres_from_worker
 }
 
 resource "aws_security_group" "elasticache" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to the ElastiCache replication group in the elasticcache module.
   name        = "url-shortener-elasticache"
   description = "Redis from ECS API, dashboard, and worker tasks only"
   vpc_id      = data.aws_vpc.main.id
