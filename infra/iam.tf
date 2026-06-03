@@ -275,4 +275,24 @@ resource "aws_iam_role_policy" "worker_task_sqs_policy" {
   })
 }
 
+# Service role assumed by CodeDeploy to manage ECS blue/green deployments
+# (shifting ALB target groups and updating the ECS service).
+resource "aws_iam_role" "codedeploy" {
+  name = "url-shortener-codedeploy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "codedeploy.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
+  role       = aws_iam_role.codedeploy.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
+}
+
 

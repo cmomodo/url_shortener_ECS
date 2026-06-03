@@ -295,6 +295,18 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https_cloudfront" {
   prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
 }
 
+# CodeDeploy blue/green test listener for the API service (validates the green
+# task set before production traffic shifts). Reachable from CloudFront only,
+# same as the production listener.
+resource "aws_vpc_security_group_ingress_rule" "alb_test_listener_cloudfront" {
+  security_group_id = aws_security_group.alb.id
+  description       = "API blue/green test listener from CloudFront"
+  ip_protocol       = "tcp"
+  from_port         = 8443
+  to_port           = 8443
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
+}
+
 resource "aws_vpc_security_group_egress_rule" "alb_to_tasks" {
   security_group_id = aws_security_group.alb.id
   description       = "To API and dashboard tasks in the VPC (avoids SG cycle with task groups)"

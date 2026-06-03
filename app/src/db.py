@@ -16,24 +16,33 @@ import os
 
 _backend = None
 _redis = None
+_redis_disabled = False
 
 CACHE_TTL = 3600  # 1 hour
 
 
 def _get_redis():
-    global _redis
+    global _redis, _redis_disabled
     if _redis is not None:
         return _redis
+    if _redis_disabled:
+        return None
     redis_url = os.environ.get("REDIS_URL")
     if not redis_url:
         return None
-    import redis
+    try:
+        import redis
 
-    kwargs = {"decode_responses": True}
-    if redis_url.startswith("rediss://"):
-        kwargs["ssl_cert_reqs"] = "required"
-    _redis = redis.from_url(redis_url, **kwargs)
-    return _redis
+        kwargs = {"decode_responses": True}
+        if redis_url.startswith("rediss://"):
+            kwargs["ssl_cert_reqs"] = "required"
+        _redis = redis.from_url(redis_url, **kwargs)
+        return _redis
+    except Exception as exc:
+        # Cache is an optimization; never fail requests because Redis is unavailable.
+        _redis_disabled = True
+        print(f"Redis disabled: {exc}")
+        return None
 
 
 def _get_backend():
@@ -116,15 +125,21 @@ def put_mapping(short_id: str, url: str):
     _get_backend()["put"](short_id, url)
     r = _get_redis()
     if r:
-        r.setex(f"url:{short_id}", CACHE_TTL, url)
+        try:
+            r.setex(f"url:{short_id}", CACHE_TTL, url)
+        except Exception as exc:
+            print(f"Redis cache write failed: {exc}")
 
 
 def get_mapping(short_id: str):
     r = _get_redis()
     if r:
-        cached = r.get(f"url:{short_id}")
-        if cached:
-            return {"id": short_id, "url": cached, "clicks": 0}
+        try:
+            cached = r.get(f"url:{short_id}")
+            if cached:
+                return {"id": short_id, "url": cached, "clicks": 0}
+        except Exception as exc:
+            print(f"Redis cache read failed: {exc}")
     return _get_backend()["get"](short_id)
 
 

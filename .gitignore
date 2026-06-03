@@ -29,3 +29,6 @@ generated-diagrams
 
 #ignore state file
 state.tf
+
+#ignore role.json
+role.json

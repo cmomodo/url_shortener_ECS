@@ -23,6 +23,7 @@ module "ecs" {
   database_url_parameter_arn  = aws_ssm_parameter.database_url.arn
   sqs_queue_url_parameter_arn = aws_ssm_parameter.sqs_queue_url.arn
   redis_url_parameter_arn     = aws_ssm_parameter.redis_url.arn
+  codedeploy_service_role_arn = aws_iam_role.codedeploy.arn
 
   depends_on = [aws_s3_bucket_policy.alb_logs]
 }

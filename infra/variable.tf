@@ -94,3 +94,15 @@ variable "terraform_state_enforce_allowlist" {
   description = "When true and terraform_state_access_role_arns is set, deny all other principals on the state bucket."
   default     = false
 }
+
+variable "github_repo" {
+  type        = string
+  description = "Full GitHub repository ID (owner/name) the container-deploy pipeline tracks."
+  default     = "cmomodo/url_shortener_ECS"
+}
+
+variable "github_branch" {
+  type        = string
+  description = "Git branch the container-deploy pipeline tracks."
+  default     = "main"
+}
