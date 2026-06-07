@@ -34,3 +34,6 @@ state.tf
 
 #ignore role.json
 role.json
+
+#ignore .antigravitycli
+.antigravitycli/
