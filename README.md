@@ -78,11 +78,13 @@ Design and document the full deployment workflow in your README. Code merge to l
 The pipeline authenticates to AWS using OIDC — no long-lived credentials.
 
 **Role ARN** (set as `AWS_TERRAFORM_ROLE_ARN` in GitHub Actions secrets):
+
 ```
-arn:aws:iam::449095351082:role/url-shortener-github-terraform
+arn:aws:iam::<acceess_Key>:role/url-shortener-github-terraform
 ```
 
 The role was created with:
+
 ```bash
 aws iam create-role \
   --role-name url-shortener-github-terraform \
@@ -96,6 +98,7 @@ aws iam attach-role-policy \
 The trust policy in `role.json` restricts assumption to the `cmomodo/url_shortener_ECS` repository only.
 
 Before the pipeline can assume this role, the GitHub OIDC provider must exist in your AWS account:
+
 ```bash
 aws iam create-open-id-connect-provider \
   --url https://token.actions.githubusercontent.com \

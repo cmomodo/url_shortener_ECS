@@ -88,7 +88,7 @@ If your `aws_kms_key.app` is configured with a deletion window, destroying it ma
 
 ## Terraform state bucket policy (SEC-3)
 
-The remote backend bucket (`my-27-state-bucket`, see `infra/state.tf`) is not created by this stack, but `infra/state_bucket_policy.tf` can attach a **bucket policy** to it:
+The remote backend bucket is not created by this stack, but `infra/state_bucket_policy.tf` can attach a **bucket policy** to the bucket configured through `TF_STATE_BUCKET` / `terraform_state_bucket_name`:
 
 | Statement | Purpose |
 |-----------|---------|

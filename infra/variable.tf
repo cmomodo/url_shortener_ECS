@@ -80,7 +80,6 @@ variable "hosted_zone_id" {
 variable "terraform_state_bucket_name" {
   type        = string
   description = "S3 bucket used by the Terraform remote backend (infra/state.tf)."
-  default     = "my-27-state-bucket"
 }
 
 variable "terraform_state_access_role_arns" {
@@ -104,5 +103,5 @@ variable "github_repo" {
 variable "github_branch" {
   type        = string
   description = "Git branch the container-deploy pipeline tracks."
-  default     = "main"
+  default     = "securityn"
 }

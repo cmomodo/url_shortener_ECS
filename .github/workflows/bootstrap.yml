@@ -1,23 +1,35 @@
+# Bootstrap pipeline: provisions the ECR repositories (url-shortener/api,
+# url-shortener/dashboard, url-shortener/worker) that the main infra pipeline
+# (ci.yml) reads as data sources. Run this BEFORE the CI pipeline — the main
+# stack fails to plan if these repositories do not yet exist.
+#
 # Required GitHub secrets (Settings > Secrets and variables > Actions):
 #
 #   AWS_TERRAFORM_ROLE_ARN  - ARN of the IAM role GitHub Actions assumes via
-#                             OIDC to run Terraform (e.g. arn:aws:iam::<account-id>:role/<role-name>).
-#                             Create this role using the script at infra/bootstrap/create_github_oidc_role.sh
-#                             or by running `terraform apply` in the infra directory.
+#                             OIDC to run Terraform.
 #
-# Required GitHub environment variables (Settings > Secrets and variables > Actions > Variables):
-#
-#   AWS_REGION        - AWS region where resources are deployed
+# Required GitHub environment variables:
+#   AWS_REGION        - AWS region where the ECR repositories are created
 #   TF_STATE_BUCKET   - S3 bucket name for Terraform remote state
-#   TF_STATE_KEY      - Path/key for the Terraform state file within the bucket
+#                       (reuses the same bucket as the main pipeline, with a
+#                        dedicated state key below)
+#   TF_BOOTSTRAP_STATE_KEY - Optional state key override for this bootstrap stack
 
-name: CI
+name: Bootstrap (ECR)
 
 on:
   push:
     branches: [securityn]
+    paths:
+      - "infra-ecr/**"
+      - "modules/ecr/**"
+      - ".github/workflows/bootstrap.yml"
   pull_request:
     branches: [securityn]
+    paths:
+      - "infra-ecr/**"
+      - "modules/ecr/**"
+      - ".github/workflows/bootstrap.yml"
   workflow_dispatch:
     inputs:
       terraform_action:
@@ -30,7 +42,7 @@ on:
           - apply
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.terraform_action || 'plan' }}
+  group: bootstrap-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.terraform_action || 'plan' }}
   cancel-in-progress: true
 
 permissions:
@@ -40,17 +52,16 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-  TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+  TF_STATE_KEY: ${{ vars.TF_BOOTSTRAP_STATE_KEY }}
   TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }}
-  TF_VAR_terraform_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
 
 jobs:
-  terraform:
-    name: Terraform ${{ github.event.inputs.terraform_action || 'plan' }}
+  bootstrap:
+    name: Bootstrap ECR ${{ github.event.inputs.terraform_action || 'plan' }}
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: infra
+        working-directory: infra-ecr
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +75,7 @@ jobs:
         run: |
           test -n "$AWS_REGION" || { echo "AWS_REGION repository variable is required"; exit 1; }
           test -n "$TF_STATE_BUCKET" || { echo "TF_STATE_BUCKET repository variable is required"; exit 1; }
-          test -n "$TF_STATE_KEY" || { echo "TF_STATE_KEY repository variable is required"; exit 1; }
+          test -n "$TF_STATE_KEY" || { echo "TF_BOOTSTRAP_STATE_KEY repository variable is required"; exit 1; }
           test -n "$TF_IN_AUTOMATION" || { echo "TF_IN_AUTOMATION repository variable is required"; exit 1; }
           test -n "$AWS_TERRAFORM_ROLE_ARN" || { echo "AWS_TERRAFORM_ROLE_ARN secret is required"; exit 1; }
 
@@ -101,10 +112,10 @@ jobs:
         if: github.event.inputs.terraform_action != 'apply'
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan-${{ github.run_id }}
+          name: bootstrap-terraform-plan-${{ github.run_id }}
           path: |
-            infra/tfplan
-            infra/tfplan.txt
+            infra-ecr/tfplan
+            infra-ecr/tfplan.txt
           retention-days: 14
 
       - name: Terraform plan for apply
@@ -119,10 +130,10 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply'
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-apply-plan-${{ github.run_id }}
+          name: bootstrap-terraform-apply-plan-${{ github.run_id }}
           path: |
-            infra/tfplan
-            infra/tfplan.txt
+            infra-ecr/tfplan
+            infra-ecr/tfplan.txt
           retention-days: 14
 
       - name: Terraform apply

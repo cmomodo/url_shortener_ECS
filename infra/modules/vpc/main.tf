@@ -286,23 +286,14 @@ resource "aws_security_group" "alb" {
 # CloudFront prefix list. ALB:80 still accepts redirects for other paths but is not
 # used by this distribution’s origin connection.
 
+# Single rule for 443 (production) and 8443 (CodeDeploy test listener). Each
+# prefix-list CIDR counts toward the per-SG rule quota (~60); a second rule
+# referencing the same CloudFront list would exceed that limit.
 resource "aws_vpc_security_group_ingress_rule" "alb_https_cloudfront" {
   security_group_id = aws_security_group.alb.id
-  description       = "HTTPS from CloudFront"
+  description       = "HTTPS and API blue/green test listener from CloudFront"
   ip_protocol       = "tcp"
   from_port         = 443
-  to_port           = 443
-  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
-}
-
-# CodeDeploy blue/green test listener for the API service (validates the green
-# task set before production traffic shifts). Reachable from CloudFront only,
-# same as the production listener.
-resource "aws_vpc_security_group_ingress_rule" "alb_test_listener_cloudfront" {
-  security_group_id = aws_security_group.alb.id
-  description       = "API blue/green test listener from CloudFront"
-  ip_protocol       = "tcp"
-  from_port         = 8443
   to_port           = 8443
   prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
 }
