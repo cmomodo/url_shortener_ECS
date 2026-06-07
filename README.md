@@ -106,6 +106,38 @@ aws iam create-open-id-connect-provider \
   --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
 ```
 
+### Configure GitHub Actions Variables and Secrets
+
+Once the OIDC role and provider are set up, configure the GitHub Actions variables and secrets by running:
+
+```bash
+scripts/configure_github_actions_vars.sh
+```
+
+This script reads from `.env` and configures the following in your GitHub repository:
+
+**Variables:**
+- `AWS_REGION` - AWS region where resources are deployed
+- `TF_STATE_BUCKET` - S3 bucket name for Terraform remote state
+- `TF_STATE_KEY` - Path/key for the Terraform state file within the bucket
+- `TF_BOOTSTRAP_STATE_KEY` - Path/key for the bootstrap Terraform state file
+- `TF_IN_AUTOMATION` - Flag to enable Terraform automation mode
+
+**Secrets:**
+- `AWS_TERRAFORM_ROLE_ARN` - ARN of the IAM role for GitHub Actions to assume via OIDC
+
+Use `.env.example` as a template for the `.env` file. For a dry-run (preview without making changes):
+
+```bash
+scripts/configure_github_actions_vars.sh --dry-run
+```
+
+To list current variables and secrets:
+
+```bash
+scripts/configure_github_actions_vars.sh --list
+```
+
 ---
 
 ## Local Development
