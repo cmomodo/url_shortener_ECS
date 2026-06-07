@@ -1,6 +1,6 @@
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics.
+A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics. We will use Github Actions for CI/CD. We will use Terraform for infrastructure as code. For local development, we will use Docker Compose.
 
 ## Services
 
@@ -117,6 +117,7 @@ scripts/configure_github_actions_vars.sh
 This script reads from `.env` and configures the following in your GitHub repository:
 
 **Variables:**
+
 - `AWS_REGION` - AWS region where resources are deployed
 - `TF_STATE_BUCKET` - S3 bucket name for Terraform remote state
 - `TF_STATE_KEY` - Path/key for the Terraform state file within the bucket
@@ -124,6 +125,7 @@ This script reads from `.env` and configures the following in your GitHub reposi
 - `TF_IN_AUTOMATION` - Flag to enable Terraform automation mode
 
 **Secrets:**
+
 - `AWS_TERRAFORM_ROLE_ARN` - ARN of the IAM role for GitHub Actions to assume via OIDC
 
 Use `.env.example` as a template for the `.env` file. For a dry-run (preview without making changes):
@@ -168,5 +170,3 @@ To smoke test the SQS publish path locally against default AWS, run:
 Use the default AWS endpoint for SQS testing.
 
 Everything else is on you. Commit small. Good luck.
-
-# url_shortener_ECS
