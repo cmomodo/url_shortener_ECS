@@ -290,6 +290,7 @@ resource "aws_security_group" "alb" {
 # prefix-list CIDR counts toward the per-SG rule quota (~60); a second rule
 # referencing the same CloudFront list would exceed that limit.
 resource "aws_vpc_security_group_ingress_rule" "alb_https_cloudfront" {
+  #checkov:skip=CKV_AWS_25: Ingress is restricted to the CloudFront managed prefix list, not 0.0.0.0/0; the 443-8443 range only serves HTTPS (443) and the CodeDeploy blue/green test listener (8443), so port 3389 is never exposed to the internet.
   security_group_id = aws_security_group.alb.id
   description       = "HTTPS and API blue/green test listener from CloudFront"
   ip_protocol       = "tcp"
