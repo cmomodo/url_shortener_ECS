@@ -107,7 +107,7 @@ terraform_state_enforce_allowlist = true
 
 **Before enforcing the allowlist**, ensure every principal that runs `terraform plan/apply` (local laptop role, CI OIDC role) is in the list, or you will lock yourself out of state.
 
-Applies to both state keys: `global/s3/url-shortener.tfstate` and `global/s3/url-shortener-ecr.tfstate` in the same bucket.
+Applies to both state keys: `url-shortener-infra/terraform.tfstate` (main stack) and `url-shortener-ecr/terraform.tfstate` (bootstrap ECR stack) in the same bucket. These keys must match the `TF_STATE_KEY` and `TF_BOOTSTRAP_STATE_KEY` GitHub Actions variables used by the pipelines.
 
 ## Notes
 

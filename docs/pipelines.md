@@ -15,12 +15,12 @@ The CI pipeline is defined in `.github/workflows/ci.yml` and is responsible for 
 
 | Trigger                      | What happens                                                          |
 | ---------------------------- | --------------------------------------------------------------------- |
-| Push to `main`               | Runs `terraform plan` to validate the infrastructure changes          |
-| Pull request to `main`       | Runs `terraform plan` so you can review changes before merging        |
+| Push to the tracked branch (`securityn`) | Runs `terraform plan`, uploads the plan artifact, then applies it     |
+| Pull request to the tracked branch (`securityn`) | Runs `terraform plan` so you can review changes before merging        |
 | Manual (`workflow_dispatch`) | You choose to run either `plan` or `apply` from the GitHub Actions UI |
 
 
-Only a manual `apply` will actually make changes to your AWS infrastructure. Pushes and PRs always run `plan` only — they never mutate infrastructure.
+Pushes to the tracked branch and manual `apply` runs make changes to AWS infrastructure. Pull requests and manual `plan` runs only create a plan — they never mutate infrastructure.
 
 ### Steps it runs in order
 
@@ -31,7 +31,7 @@ Only a manual `apply` will actually make changes to your AWS infrastructure. Pus
 5. **Terraform init** — connects to the S3 remote state backend with native S3 lockfiles enabled
 6. **Terraform validate** — checks that the Terraform configuration is syntactically valid
 7. **Terraform plan** — previews what changes would be made (runs on push/PR and manual `plan`) and saves both `tfplan` and `tfplan.txt` as workflow artifacts
-8. **Terraform apply** — creates a saved `tfplan`, uploads it as an artifact, then applies that exact plan (only runs on manual `apply`)
+8. **Terraform apply** — creates a saved `tfplan`, uploads it as an artifact, then applies that exact plan (runs on push or manual `apply`)
 9. **Verify idempotency** — runs `terraform plan` again after apply and fails if there are any unexpected remaining changes
 
 ### Concurrency

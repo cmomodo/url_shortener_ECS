@@ -202,6 +202,8 @@ require_command gh
 [[ -n "$TF_STATE_KEY_VALUE" ]] || die "TF_STATE_KEY cannot be empty"
 [[ -n "$TF_BOOTSTRAP_STATE_KEY_VALUE" ]] || die "TF_BOOTSTRAP_STATE_KEY cannot be empty"
 [[ -n "$TF_IN_AUTOMATION_VALUE" ]] || die "TF_IN_AUTOMATION cannot be empty"
+[[ "$TF_STATE_KEY_VALUE" != "$TF_BOOTSTRAP_STATE_KEY_VALUE" ]] ||
+  die "TF_STATE_KEY and TF_BOOTSTRAP_STATE_KEY must be different state keys"
 
 repo="$(resolve_repo)"
 

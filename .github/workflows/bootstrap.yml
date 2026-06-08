@@ -13,7 +13,8 @@
 #   TF_STATE_BUCKET   - S3 bucket name for Terraform remote state
 #                       (reuses the same bucket as the main pipeline, with a
 #                        dedicated state key below)
-#   TF_BOOTSTRAP_STATE_KEY - Optional state key override for this bootstrap stack
+#   TF_BOOTSTRAP_STATE_KEY - Dedicated bootstrap state key
+#                            (expected: url-shortener-ecr/terraform.tfstate)
 
 name: Bootstrap (ECR)
 
