@@ -6,26 +6,97 @@ then we will use codedeploy via blue/green deployment for the containers. API/ d
 
 we will create roles that are least privileged and will only be used for the pipeline.
 
-## How the CI Pipeline Works (GitHub Actions)
+## How triggers work
 
-The CI pipeline is defined in `.github/workflows/ci.yml` and is responsible for deploying the AWS infrastructure using Terraform. It does **not** build or deploy containers — that is handled by CodeBuild/CodePipeline.
+The project has **three independent delivery paths**. They do not call each other; each one watches Git (or is started manually) on its own rules.
+
+| Pipeline | Defined in | Tracked branch | Path filter | Auto on push | Manual trigger | Mutates AWS? |
+| -------- | ---------- | -------------- | ----------- | ------------ | -------------- | ------------ |
+| Bootstrap (ECR) | `.github/workflows/bootstrap.yml` | `securityn` | Yes — only `infra-ecr/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | Plan + apply when matched paths change | `workflow_dispatch` — choose `plan` or `apply` | Apply runs only |
+| Main infra (Terraform) | `.github/workflows/ci.yml` | `securityn` | No — **any** file change on the branch | Plan + apply on every push | `workflow_dispatch` — choose `plan` or `apply` | Apply runs only |
+| Container deploy | `infra/modules/cicd/main.tf` (`url-shortener-container-deploy`) | `securityn` (via `var.github_branch`) | No — **any** commit on the tracked branch | Full pipeline: Source → Build → Deploy | Start execution in the CodePipeline console (or AWS CLI) | Yes — builds images and deploys ECS |
+
+**Tracked branch:** All three paths target the same branch today (`securityn`). The container pipeline reads `var.github_branch` in Terraform (default `securityn`); the GitHub Actions workflows hard-code the same branch in their `on:` blocks.
+
+**Pull requests:** Only the two GitHub Actions workflows run on PRs, and both are **plan-only** — they never apply. CodePipeline does not run for pull requests.
+
+**Destroy:** There is no automated destroy workflow today. Teardown is expected to be a deliberate manual step (for example a future `workflow_dispatch` Terraform destroy job). Nothing in the repo triggers destroy on push.
+
+### What a single `git push` can start
+
+Because path filters differ, one push may start one, two, or all three pipelines:
+
+
+| Changed files | Bootstrap | Main infra (`ci.yml`) | Container (`CodePipeline`) |
+| ------------- | --------- | --------------------- | ---------------------------- |
+| `app/**`, `services/**`, `ci/**` only | No | Yes — Terraform apply | Yes — build + deploy |
+| `infra/**` only (not `infra-ecr`) | No | Yes — Terraform apply | Yes — build + deploy |
+| `infra-ecr/**` or `modules/ecr/**` | Yes — Terraform apply | Yes — Terraform apply | Yes — build + deploy |
+| Docs/markdown only | No | Yes — Terraform apply | Yes — build + deploy |
+
+A push that only touches bootstrap paths therefore runs **bootstrap apply**, **main infra apply**, and **container build/deploy** in parallel (three separate systems).
+
+### Concurrency (in-flight runs)
+
+Each workflow cancels an older run on the same branch when a new one starts:
+
+
+| Pipeline | Concurrency group | Effect |
+| -------- | ----------------- | ------ |
+| Bootstrap | `bootstrap-<workflow>-<ref>-<plan\|apply>` | New bootstrap run cancels the previous one for that ref and action |
+| Main infra | `ci-<workflow>-<ref>-<plan\|apply>` | Push always uses `apply`; manual/PR uses the selected or default `plan` |
+| Container | None in Terraform | CodePipeline queues executions; overlapping runs are possible if pushes are frequent |
+
+### One-time setup that affects triggers
+
+The container pipeline uses a **CodeStar Connections** GitHub link (`url-shortener-github`). Until that connection is authorized in the AWS console (status `PENDING` → `AVAILABLE`), pushes to GitHub will **not** start the container pipeline. Terraform creates the connection; authorization is manual in the console (see output `cicd_github_connection_arn`).
+
+---
+
+## Bootstrap pipeline (GitHub Actions)
+
+Workflow file: `.github/workflows/bootstrap.yml`
+
+Provisions ECR repositories (`url-shortener/api`, `url-shortener/dashboard`, `url-shortener/worker`) in the `infra-ecr` Terraform stack. Run this **before** the main infra pipeline — the main stack reads those repos as data sources and fails to plan if they do not exist.
 
 ### When it runs
 
 
-| Trigger                      | What happens                                                          |
-| ---------------------------- | --------------------------------------------------------------------- |
-| Push to the tracked branch (`securityn`) | Runs `terraform plan`, uploads the plan artifact, then applies it     |
-| Pull request to the tracked branch (`securityn`) | Runs `terraform plan` so you can review changes before merging        |
-| Manual (`workflow_dispatch`) | You choose to run either `plan` or `apply` from the GitHub Actions UI |
+| Trigger | Condition | What happens |
+| ------- | --------- | -------------- |
+| Push to `securityn` | Only if the commit changes `infra-ecr/**`, `modules/ecr/**`, or `.github/workflows/bootstrap.yml` | `terraform plan` → upload plan artifact → `terraform apply` → idempotency check |
+| Pull request → `securityn` | Same path filter as push | `terraform plan` only; plan uploaded as artifact |
+| Manual (`workflow_dispatch`) | Always available from the Actions tab | Input `terraform_action`: `plan` (default) or `apply` |
+
+Pushes and manual `apply` mutate AWS. Pull requests and manual `plan` never apply.
+
+State key: `TF_BOOTSTRAP_STATE_KEY` (expected `url-shortener-ecr/terraform.tfstate`).
+
+---
+
+## Main infra pipeline (GitHub Actions)
+
+Workflow file: `.github/workflows/ci.yml`
+
+Deploys the main AWS stack (`infra/`) with Terraform. It does **not** build or deploy containers — that is handled by CodePipeline → CodeBuild → CodeDeploy/ECS.
+
+### When it runs
 
 
-Pushes to the tracked branch and manual `apply` runs make changes to AWS infrastructure. Pull requests and manual `plan` runs only create a plan — they never mutate infrastructure.
+| Trigger | Condition | What happens |
+| ------- | --------- | -------------- |
+| Push to `securityn` | **No path filter** — every push to the branch | `terraform plan` → upload plan artifact → `terraform apply` → idempotency check |
+| Pull request → `securityn` | Any PR targeting the branch | `terraform plan` only; plan uploaded as artifact |
+| Manual (`workflow_dispatch`) | Always available from the Actions tab | Input `terraform_action`: `plan` (default) or `apply` |
+
+Pushes and manual `apply` mutate AWS. Pull requests and manual `plan` never apply.
+
+State key: `TF_STATE_KEY` (expected `url-shortener-infra/terraform.tfstate`).
 
 ### Steps it runs in order
 
 1. **Checkout** — pulls the repo code onto the runner
-2. **Setup Terraform** — installs Terraform v1.9.0 on the runner
+2. **Setup Terraform** — installs Terraform v1.14.7 on the runner
 3. **Check formatting** — runs `terraform fmt -check` and fails if any `.tf` files are not formatted correctly
 4. **Configure AWS credentials** — assumes the `AWS_TERRAFORM_ROLE_ARN` IAM role via OIDC (no long-lived access keys needed)
 5. **Terraform init** — connects to the S3 remote state backend with native S3 lockfiles enabled
@@ -36,13 +107,52 @@ Pushes to the tracked branch and manual `apply` runs make changes to AWS infrast
 
 ### Concurrency
 
-Only one run per branch/action can run at a time. If a new run is triggered while one is already in progress, the in-progress run is cancelled.
+Only one run per branch and action (`plan` vs `apply`) can run at a time. If a new run is triggered while one is already in progress, the in-progress run is cancelled.
+
+---
+
+## Container deploy pipeline (CodePipeline)
+
+Terraform: `infra/modules/cicd/main.tf` — pipeline name `url-shortener-container-deploy`.
+
+Orchestrates GitHub source → CodeBuild (build and push images) → deploy (CodeDeploy blue/green for API, ECS rolling for dashboard and worker). This path is entirely in AWS; it does not use GitHub Actions.
+
+### When it runs
+
+
+| Trigger | Condition | What happens |
+| ------- | --------- | -------------- |
+| Push to tracked branch | Commit lands on `var.github_branch` (default `securityn`) after the CodeStar GitHub connection is `AVAILABLE` | CodePipeline starts automatically: Source (zip from GitHub) → Build (CodeBuild) → Deploy (parallel CodeDeploy + two ECS updates) |
+| Manual | CodePipeline console → **Release change**, or `aws codepipeline start-pipeline-execution` | Re-runs the pipeline on the latest commit already seen on the branch (does not rebuild from a different branch unless that branch is configured in Terraform) |
+
+There is **no path filter**. A documentation-only push still runs a full image build and deployment if it is pushed to the tracked branch.
+
+Repository and branch are set in Terraform:
+
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `github_repo` | `cmomodo/url_shortener_ECS` | `FullRepositoryId` for CodeStar Source Connection |
+| `github_branch` | `securityn` | Branch the Source stage polls |
+
+CodeBuild is **not** triggered directly by GitHub. It only runs as the Build stage of this pipeline (source type `CODEPIPELINE`).
+
+### Deploy stage (after a successful build)
+
+Three deploy actions run in parallel (`run_order = 1`):
+
+
+| Action | Provider | Service |
+| ------ | -------- | ------- |
+| `DeployApi` | CodeDeployToECS | API — blue/green via `url-shortener-api` deployment group |
+| `DeployDashboard` | ECS | Dashboard — rolling update from `imagedefinitions-dashboard.json` |
+| `DeployWorker` | ECS | Worker — rolling update from `imagedefinitions-worker.json` |
 
 ---
 
 ## What CodeBuild Does
 
-CodeBuild is triggered by CodePipeline after a push to the tracked branch. It is responsible for building the Docker images for all three services and producing the deployment artifacts that the deploy stage consumes.
+CodeBuild runs inside the container pipeline's Build stage. It is responsible for building the Docker images for all three services and producing the deployment artifacts that the deploy stage consumes.
 
 The buildspec is defined in `ci/docker/buildspec.yml` and runs in three phases:
 
@@ -50,7 +160,7 @@ The buildspec is defined in `ci/docker/buildspec.yml` and runs in three phases:
 
 - Authenticates with Amazon ECR using the CodeBuild role
 - Generates a unique image tag from the first 8 characters of the git commit SHA plus a timestamp (e.g. `a1b2c3d4-20260603120000`)
-- The authentication has to be done manually using the aws console. its marks as pending since its done with terraform.
+- ECR login uses the CodeBuild IAM role (no extra manual step per build). The **GitHub connection** for the pipeline Source stage is separate — that one-time console authorization is required before pushes can trigger the pipeline (see [One-time setup](#one-time-setup-that-affects-triggers) above).
 
 ### Phase 2 — build
 

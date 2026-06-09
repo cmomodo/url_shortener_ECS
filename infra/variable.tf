@@ -80,6 +80,7 @@ variable "hosted_zone_id" {
 variable "terraform_state_bucket_name" {
   type        = string
   description = "S3 bucket used by the Terraform remote backend (infra/state.tf)."
+  default     = "my-27-state-bucket"
 }
 
 variable "terraform_state_access_role_arns" {
