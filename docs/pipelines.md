@@ -6,6 +6,113 @@ then we will use codedeploy via blue/green deployment for the containers. API/ d
 
 we will create roles that are least privileged and will only be used for the pipeline.
 
+## CI/CD features
+
+### Concurrency
+
+GitHub Actions workflows use a `concurrency` group with `cancel-in-progress: true` so only one run per branch and action type is active at a time. A newer push cancels a stale in-flight run instead of stacking competing Terraform applies or plans.
+
+| Workflow | Concurrency group | Notes |
+| -------- | ----------------- | ----- |
+| Bootstrap | `bootstrap-<workflow>-<ref>-<plan\|apply>` | Push and manual `apply` share the `apply` slot; PRs and manual `plan` use `plan` |
+| Main infra (`ci.yml`) | `ci-<workflow>-<ref>-<plan\|apply>` | Push always maps to `apply`; PRs and manual runs use `plan` or the selected input |
+
+The container CodePipeline has **no** concurrency guard in Terraform. Rapid pushes queue separate pipeline executions; CodePipeline runs them sequentially per pipeline, but overlapping builds can still occur under heavy churn.
+
+### OIDC
+
+Terraform pipelines authenticate to AWS with **OpenID Connect** — no long-lived access keys in GitHub.
+
+1. GitHub Actions requests a short-lived OIDC token (`permissions: id-token: write` in both workflows).
+2. `aws-actions/configure-aws-credentials` exchanges that token for temporary AWS credentials by calling `sts:AssumeRoleWithWebIdentity`.
+3. The runner assumes `AWS_TERRAFORM_ROLE_ARN` (secret), typically `url-shortener-github-terraform`.
+
+Setup (once per account):
+
+- Create the GitHub OIDC provider (`https://token.actions.githubusercontent.com`) — see `scripts/setup_oidc.sh`.
+- Create the Terraform role with a trust policy scoped to this repository (and optionally branch/environment).
+- Store the role ARN as the `AWS_TERRAFORM_ROLE_ARN` secret.
+
+The **container pipeline does not use OIDC**. It pulls source through CodeStar Connections and runs under AWS service roles (CodePipeline, CodeBuild, CodeDeploy).
+
+### Least privilege
+
+Each automation path uses dedicated IAM roles with scoped inline policies (or AWS-managed policies where appropriate):
+
+| Role | Used by | Scope |
+| ---- | ------- | ----- |
+| `url-shortener-github-terraform` | GitHub Actions (bootstrap + main infra) | Trust limited to the GitHub repo via OIDC; permissions for Terraform (bootstrap script attaches `AdministratorAccess` today — tighten for production) |
+| `url-shortener-codebuild` | CodeBuild | CloudWatch logs for the build project; ECR push to the three `url-shortener/*` repos only; read/write on the pipeline artifact bucket and its KMS key |
+| `url-shortener-pipeline` | CodePipeline | Artifact bucket + KMS; CodeStar connection; start the single CodeBuild project; CodeDeploy and ECS deploy actions; `iam:PassRole` only for the ECS execution and task roles, with `PassedToService = ecs-tasks.amazonaws.com` |
+| `url-shortener-codedeploy` | CodeDeploy (API blue/green) | `AWSCodeDeployRoleForECS` managed policy |
+
+Terraform state access can be further restricted with `terraform_state_access_role_arns` and `terraform_state_enforce_allowlist` on the state bucket (`infra/state_bucket_policy.tf`), so only listed role ARNs (for example the GitHub OIDC role) can read or write state.
+
+Roles are defined in:
+
+- `infra/modules/cicd/main.tf` — CodeBuild and CodePipeline
+- `infra/iam.tf` — CodeDeploy service role
+- `scripts/setup_oidc.sh` — GitHub Terraform role (manual bootstrap)
+
+### Artifacts
+
+Artifacts carry outputs between pipeline stages and preserve evidence for review.
+
+**GitHub Actions (Terraform)**
+
+| Artifact | When uploaded | Retention | Purpose |
+| -------- | ------------- | --------- | ------- |
+| `tfplan` + `tfplan.txt` | Every plan run (PR, manual `plan`, and pre-apply on push) | 14 days | Human-readable plan for review; binary plan reused for apply on push |
+
+Apply always runs against the **saved** `tfplan` from the same workflow run (plan-then-apply), not a fresh implicit apply.
+
+**CodePipeline (container deploy)**
+
+| Stage | Artifact | Store |
+| ----- | -------- | ----- |
+| Source | `source` — repo zip from GitHub | S3 bucket `url-shortener-cicd-artifacts-<account_id>`, SSE-KMS, versioning enabled |
+| Build | `build_out` — deploy manifests from CodeBuild | Same bucket |
+| Deploy | Consumes `build_out` in parallel deploy actions | Not stored separately |
+
+CodeBuild `post_build` files inside `build_out`:
+
+| File | Consumer |
+| ---- | -------- |
+| `taskdef-api.json` | CodeDeploy (API) |
+| `appspec-api.yaml` | CodeDeploy (API) |
+| `imagedefinitions-dashboard.json` | ECS rolling (dashboard) |
+| `imagedefinitions-worker.json` | ECS rolling (worker) |
+
+Artifact bucket lifecycle: objects expire after 30 days; noncurrent versions expire after 30 days.
+
+### SHA digest
+
+Images and infrastructure changes are tied to immutable, traceable identifiers.
+
+**Git commit SHA in image tags**
+
+CodeBuild sets the image tag from the pipeline source revision:
+
+```text
+IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}-$(date +%Y%m%d%H%M%S)"
+```
+
+Example: `a1b2c3d4-20260603120000` — first 8 characters of the Git commit SHA plus a UTC timestamp. The same tag is applied to all three service images in a single pipeline run so api, dashboard, and worker stay in sync.
+
+`CODEBUILD_RESOLVED_SOURCE_VERSION` is the full commit SHA passed from the CodePipeline Source stage.
+
+**ECR image digest (SHA256)**
+
+When CodeBuild pushes to ECR, each image receives an ECR **content digest** (`sha256:…`) in addition to the tag. ECR repositories are configured with `image_tag_mutability = "IMMUTABLE"` (`modules/ecr/main.tf`), so a tag cannot be overwritten — pushing the same tag twice fails, which prevents silent drift.
+
+Deploy artifacts reference `repository_url:tag` (for example in `taskdef-api.json` and `imagedefinitions-*.json`). ECS and CodeDeploy resolve that tag to the digest at deployment time, so the running task is pinned to the exact image bits that were pushed in that build.
+
+**Terraform plan artifact**
+
+The saved `tfplan` file is the apply contract for infra changes: the apply step uses that binary plan, and the post-apply idempotency check confirms no unexpected diff remains.
+
+---
+
 ## How triggers work
 
 The project has **three independent delivery paths**. They do not call each other; each one watches Git (or is started manually) on its own rules.
@@ -35,17 +142,6 @@ Because path filters differ, one push may start one, two, or all three pipelines
 | Docs/markdown only | No | Yes — Terraform apply | Yes — build + deploy |
 
 A push that only touches bootstrap paths therefore runs **bootstrap apply**, **main infra apply**, and **container build/deploy** in parallel (three separate systems).
-
-### Concurrency (in-flight runs)
-
-Each workflow cancels an older run on the same branch when a new one starts:
-
-
-| Pipeline | Concurrency group | Effect |
-| -------- | ----------------- | ------ |
-| Bootstrap | `bootstrap-<workflow>-<ref>-<plan\|apply>` | New bootstrap run cancels the previous one for that ref and action |
-| Main infra | `ci-<workflow>-<ref>-<plan\|apply>` | Push always uses `apply`; manual/PR uses the selected or default `plan` |
-| Container | None in Terraform | CodePipeline queues executions; overlapping runs are possible if pushes are frequent |
 
 ### One-time setup that affects triggers
 
@@ -105,9 +201,7 @@ State key: `TF_STATE_KEY` (expected `url-shortener-infra/terraform.tfstate`).
 8. **Terraform apply** — creates a saved `tfplan`, uploads it as an artifact, then applies that exact plan (runs on push or manual `apply`)
 9. **Verify idempotency** — runs `terraform plan` again after apply and fails if there are any unexpected remaining changes
 
-### Concurrency
-
-Only one run per branch and action (`plan` vs `apply`) can run at a time. If a new run is triggered while one is already in progress, the in-progress run is cancelled.
+See [Concurrency](#concurrency) under CI/CD features.
 
 ---
 

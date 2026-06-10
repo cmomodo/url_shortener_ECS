@@ -1,6 +1,13 @@
 # URL Shortener - CoderCo ECS Project v2
 
-A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics. We will use Github Actions for CI/CD. We will use Terraform for infrastructure as code. For local development, we will use Docker Compose.
+[![CI](https://github.com/cmomodo/url_shortener_ECS/actions/workflows/ci.yml/badge.svg)](https://github.com/cmomodo/url_shortener_ECS/actions/workflows/ci.yml)
+[![Bootstrap (ECR)](https://github.com/cmomodo/url_shortener_ECS/actions/workflows/bootstrap.yml/badge.svg)](https://github.com/cmomodo/url_shortener_ECS/actions/workflows/bootstrap.yml)
+[![Terraform](https://img.shields.io/badge/Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![AWS ECS](https://img.shields.io/badge/AWS%20ECS-232F3E?logo=amazonaws&logoColor=white)](https://aws.amazon.com/ecs/)
+
+A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics. We will use Github Actions for CI/CD. We will use Terraform for infrastructure as code. For local development, we will use Docker Compose. We have pre-commits hooks for linting and secure push.
 
 ## Services
 
@@ -22,7 +29,7 @@ AWS
 
 # System Design
 
-![System Design](images/URL_shortener.png)
+System Design
 
 ### Features
 
@@ -38,7 +45,7 @@ AWS
 - Terraform with remote state
 - Multi-stage Docker builds
 
-Terraform uses an S3 backend for remote state, configured in [`infra/state.tf`](/Users/momodou/Documents/projects/Coderco_Projects/url-shortener-main/infra/state.tf). Create the backend bucket once before running `terraform init`, or `init` will fail until the bucket exists.
+Terraform uses an S3 backend for remote state, configured in `[infra/state.tf](/Users/momodou/Documents/projects/Coderco_Projects/url-shortener-main/infra/state.tf)`. Create the backend bucket once before running `terraform init`, or `init` will fail until the bucket exists.
 
 ### Database Decision
 
@@ -166,7 +173,3 @@ To smoke test the SQS publish path locally against default AWS, run:
 - You can explain every resource you created
 
 **Tear down when done.** ALB + WAF cost money even idle.
-
-Use the default AWS endpoint for SQS testing.
-
-Everything else is on you. Commit small. Good luck.
