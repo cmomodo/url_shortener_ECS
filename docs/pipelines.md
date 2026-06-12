@@ -7,7 +7,8 @@ The project uses **GitHub Actions** for automation. All workflows target the
 | -------- | ------------- | -------------- | ------------ |
 | Bootstrap (ECR) | `.github/workflows/bootstrap.yml` | `rollout` | Apply on push/manual |
 | Main infra (Terraform) | `.github/workflows/ci.yml` | `rollout` | Apply on push/manual |
-| Container deploy | `.github/workflows/docker.yml` + `.github/workflows/deploy.yml` | `rollout` | Builds images and triggers CodeDeploy |
+| Build images | `.github/workflows/docker.yml` | `rollout` | Push 3 images to ECR; also triggerable manually |
+| Deploy services | `.github/workflows/deploy.yml` | `rollout` | Registers task definitions and triggers CodeDeploy |
 
 ---
 
@@ -89,10 +90,12 @@ with CodeDeploy blue/green deployments.
 
 Workflow: `.github/workflows/docker.yml`
 
-Triggered when the CI workflow completes successfully on `rollout`.
+Triggered automatically when the CI workflow completes successfully on `rollout`,
+or **manually** via `workflow_dispatch` (Actions → Build and Push Docker Images
+→ Run workflow).
 
-It builds all three service images for `linux/arm64`, then pushes each image to
-ECR with an immutable tag.
+It builds all three service images for `linux/arm64` in parallel, then pushes
+each image to its own ECR repository with an immutable tag.
 
 | Service | Build context | ECR repo |
 | ------- | ------------- | -------- |
@@ -103,6 +106,9 @@ ECR with an immutable tag.
 Image tag format: `<sha7>-<docker-workflow-run-id>`, for example
 `a1b2c3d-12345678901`. The run ID is shared across the matrix jobs, so API,
 dashboard, and worker get the same tag in one build.
+
+When triggered via `workflow_dispatch` the SHA is taken from `github.sha`
+(the branch HEAD at trigger time) instead of `github.event.workflow_run.head_sha`.
 
 ### Step 2: CodeDeploy Blue/Green
 

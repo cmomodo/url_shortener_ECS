@@ -300,11 +300,35 @@ resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
 # deployments for the worker.
 resource "aws_iam_policy" "deployer" {
   name        = "url-shortener-deployer"
-  description = "Allows registering ECS task definitions and deploying services."
+  description = "Allows building/pushing ECR images, registering ECS task definitions, and deploying services."
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Sid    = "ECRAuth"
+        Effect = "Allow"
+        Action = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPush"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage"
+        ]
+        Resource = [
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/api",
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/dashboard",
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/worker"
+        ]
+      },
       {
         Sid    = "RegisterTaskDefinition"
         Effect = "Allow"
