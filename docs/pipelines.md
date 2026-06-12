@@ -136,20 +136,19 @@ GitHub push to rollout
                       |
                       +-- api CodeDeploy blue/green
                       +-- dashboard CodeDeploy blue/green
-                      +-- worker CodeDeploy blue/green
+                      +-- worker ECS rolling update
 ```
 
-Each service has:
+Each CodeDeploy-backed service has:
 
 | Service | Blue target group | Green target group | Production route | Test route |
 | ------- | ----------------- | ------------------ | ---------------- | ---------- |
 | `api` | `url-shortener-api` | `url-shortener-api-green` | ALB HTTPS `:443` default route | ALB HTTPS `:8443` |
 | `dashboard` | `url-shortener-dashboard` | `url-shortener-dashboard-green` | Dashboard path listener rule on `:443` | ALB HTTPS `:8444` |
-| `worker` | `url-shortener-worker` | `url-shortener-worker-green` | ALB HTTPS `:8090` | ALB HTTPS `:8091` |
 
-The worker does not receive user traffic, but it still needs ALB target groups
-so CodeDeploy can create and validate green task sets using the worker health
-endpoint.
+The worker does not receive user traffic, so it uses the default ECS deployment
+controller and the deploy workflow updates the worker service directly after
+registering a new task definition.
 
 ---
 

@@ -24,12 +24,12 @@ output "worker_task_family" {
 
 output "codedeploy_app_names" {
   value       = module.ecs.codedeploy_app_names
-  description = "CodeDeploy application names by service."
+  description = "CodeDeploy application names by blue/green service."
 }
 
 output "codedeploy_deployment_group_names" {
   value       = module.ecs.codedeploy_deployment_group_names
-  description = "CodeDeploy deployment group names by service."
+  description = "CodeDeploy deployment group names by blue/green service."
 }
 
 # --- IAM role ARNs ---

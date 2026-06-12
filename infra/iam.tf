@@ -296,10 +296,11 @@ resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
 
 # --- Deployer policy (attach to your GitHub Actions OIDC role or operator role) ---
 # Grants the minimum permissions needed to register task definitions and trigger
-# CodeDeploy blue/green deployments for API, dashboard, and worker.
+# CodeDeploy blue/green deployments for API and dashboard, plus ECS rolling
+# deployments for the worker.
 resource "aws_iam_policy" "deployer" {
   name        = "url-shortener-deployer"
-  description = "Allows registering ECS task definitions and triggering CodeDeploy blue/green deployments."
+  description = "Allows registering ECS task definitions and deploying services."
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -354,12 +355,16 @@ resource "aws_iam_policy" "deployer" {
         Resource = [
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-api",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-dashboard",
-          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-worker",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-api/url-shortener-api",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-dashboard/url-shortener-dashboard",
-          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-worker/url-shortener-worker",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentconfig:*"
         ]
+      },
+      {
+        Sid      = "UpdateWorkerService"
+        Effect   = "Allow"
+        Action   = ["ecs:UpdateService"]
+        Resource = "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/url-shortener/worker"
       }
     ]
   })

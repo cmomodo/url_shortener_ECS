@@ -53,16 +53,14 @@ output "codedeploy_app_names" {
   value = {
     api       = aws_codedeploy_app.api.name
     dashboard = aws_codedeploy_app.dashboard.name
-    worker    = aws_codedeploy_app.worker.name
   }
-  description = "CodeDeploy application names by service."
+  description = "CodeDeploy application names by blue/green service."
 }
 
 output "codedeploy_deployment_group_names" {
   value = {
     api       = aws_codedeploy_deployment_group.api.deployment_group_name
     dashboard = aws_codedeploy_deployment_group.dashboard.deployment_group_name
-    worker    = aws_codedeploy_deployment_group.worker.deployment_group_name
   }
-  description = "CodeDeploy deployment group names by service."
+  description = "CodeDeploy deployment group names by blue/green service."
 }

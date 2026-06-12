@@ -28,10 +28,13 @@ jobs:
         include:
           - service: api
             container_port: 8080
+            deploy_method: codedeploy
           - service: dashboard
             container_port: 8081
+            deploy_method: codedeploy
           - service: worker
             container_port: 8090
+            deploy_method: ecs
 
     steps:
       - uses: actions/checkout@v4
@@ -135,6 +138,7 @@ jobs:
           echo "Registered ${TASK_DEF_ARN}"
 
       - name: Render AppSpec
+        if: ${{ matrix.deploy_method == 'codedeploy' }}
         env:
           SERVICE_NAME: ${{ matrix.service }}
           CONTAINER_PORT: ${{ matrix.container_port }}
@@ -165,6 +169,7 @@ jobs:
           cat /tmp/appspec.yaml
 
       - name: Create CodeDeploy deployment
+        if: ${{ matrix.deploy_method == 'codedeploy' }}
         id: deploy
         env:
           SERVICE_NAME: ${{ matrix.service }}
@@ -185,9 +190,28 @@ jobs:
           echo "Deployment started: ${DEPLOYMENT_ID}"
 
       - name: Wait for CodeDeploy success
+        if: ${{ matrix.deploy_method == 'codedeploy' }}
         env:
           SERVICE_NAME: ${{ matrix.service }}
           DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
         run: |
           aws deploy wait deployment-successful --deployment-id "$DEPLOYMENT_ID"
           echo "${SERVICE_NAME} blue/green deployment succeeded."
+
+      - name: Update ECS worker service
+        if: ${{ matrix.deploy_method == 'ecs' }}
+        env:
+          CLUSTER_NAME: url-shortener
+          SERVICE_NAME: ${{ matrix.service }}
+          TASK_DEF_ARN: ${{ steps.register.outputs.task_def_arn }}
+        run: |
+          aws ecs update-service \
+            --cluster "$CLUSTER_NAME" \
+            --service "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN"
+
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME"
+
+          echo "${SERVICE_NAME} ECS deployment succeeded."
