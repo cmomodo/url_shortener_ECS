@@ -102,3 +102,8 @@ variable "redis_url_parameter_arn" {
   type        = string
   description = "SSM parameter ARN containing the Redis URL."
 }
+
+variable "codedeploy_service_role_arn" {
+  type        = string
+  description = "IAM role ARN assumed by CodeDeploy for ECS blue/green deployments."
+}

@@ -1,0 +1,48 @@
+{
+  "family": "api",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "${EXECUTION_ROLE_ARN}",
+  "taskRoleArn": "${TASK_ROLE_ARN}",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "ARM64"
+  },
+  "volumes": [
+    { "name": "tmp" }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "${IMAGE_URI}",
+      "essential": true,
+      "readonlyRootFilesystem": true,
+      "mountPoints": [
+        { "sourceVolume": "tmp", "containerPath": "/tmp", "readOnly": false }
+      ],
+      "portMappings": [
+        { "containerPort": 8080, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "PORT", "value": "8080" },
+        { "name": "AWS_REGION", "value": "${AWS_REGION}" },
+        { "name": "AWS_DEFAULT_REGION", "value": "${AWS_REGION}" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "${DATABASE_URL_ARN}" },
+        { "name": "SQS_QUEUE_URL", "valueFrom": "${SQS_QUEUE_URL_ARN}" },
+        { "name": "REDIS_URL", "valueFrom": "${REDIS_URL_ARN}" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${LOG_GROUP}",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

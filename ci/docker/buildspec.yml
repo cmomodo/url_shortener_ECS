@@ -1,0 +1,55 @@
+version: 0.2
+
+# Builds the three service images natively on an ARM CodeBuild host (Fargate
+# tasks run ARM64), pushes them to ECR with an immutable tag, then emits the
+# artifacts the pipeline's deploy stage consumes:
+#   - taskdef-api.json / appspec-api.yaml  -> CodeDeploy blue/green (api)
+#   - imagedefinitions-dashboard.json      -> ECS rolling deploy (dashboard)
+#   - imagedefinitions-worker.json         -> ECS rolling deploy (worker)
+#
+# Required environment variables (set by the Terraform CodeBuild project):
+#   AWS_DEFAULT_REGION, AWS_ACCOUNT_ID
+#   ECR_API_REPO, ECR_DASHBOARD_REPO, ECR_WORKER_REPO   (repository URLs)
+#   EXECUTION_ROLE_ARN, TASK_ROLE_ARN
+#   DATABASE_URL_ARN, SQS_QUEUE_URL_ARN, REDIS_URL_ARN
+#   LOG_GROUP
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}-$(date +%Y%m%d%H%M%S)"
+      - echo "Image tag $IMAGE_TAG"
+      - export IMAGE_TAG
+  build:
+    commands:
+      - echo "Building api image..."
+      - docker build -t "${ECR_API_REPO}:${IMAGE_TAG}" ./app
+      - echo "Building dashboard image..."
+      - docker build -t "${ECR_DASHBOARD_REPO}:${IMAGE_TAG}" ./services/dashboard
+      - echo "Building worker image..."
+      - docker build -t "${ECR_WORKER_REPO}:${IMAGE_TAG}" ./services/worker
+      - echo "Pushing images..."
+      - docker push "${ECR_API_REPO}:${IMAGE_TAG}"
+      - docker push "${ECR_DASHBOARD_REPO}:${IMAGE_TAG}"
+      - docker push "${ECR_WORKER_REPO}:${IMAGE_TAG}"
+  post_build:
+    commands:
+      - echo "Rendering api task definition..."
+      - export IMAGE_URI="${ECR_API_REPO}:${IMAGE_TAG}"
+      - export AWS_REGION="${AWS_DEFAULT_REGION}"
+      - python3 ci/docker/render_taskdef.py ci/taskdef/api-taskdef.json taskdef-api.json
+      - cp ci/appspec/api-appspec.yaml appspec-api.yaml
+      - echo "Writing imagedefinitions for dashboard and worker..."
+      - printf '[{"name":"dashboard","imageUri":"%s"}]' "${ECR_DASHBOARD_REPO}:${IMAGE_TAG}" > imagedefinitions-dashboard.json
+      - printf '[{"name":"worker","imageUri":"%s"}]' "${ECR_WORKER_REPO}:${IMAGE_TAG}" > imagedefinitions-worker.json
+      - cat taskdef-api.json
+
+artifacts:
+  files:
+    - taskdef-api.json
+    - appspec-api.yaml
+    - imagedefinitions-dashboard.json
+    - imagedefinitions-worker.json
+  discard-paths: yes

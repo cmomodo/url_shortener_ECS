@@ -17,6 +17,45 @@ resource "aws_sqs_queue" "terraform_queue" {
   }
 }
 
+resource "aws_sqs_queue_policy" "terraform_queue" {
+  queue_url = aws_sqs_queue.terraform_queue.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "url-shortener-primary-queue"
+    Statement = [
+      {
+        Sid    = "AllowApiTaskSend"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.api_task_role.arn
+        }
+        Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+        ]
+        Resource = aws_sqs_queue.terraform_queue.arn
+      },
+      {
+        Sid    = "AllowWorkerTaskConsume"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.worker_task_role.arn
+        }
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:ChangeMessageVisibility",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+        ]
+        Resource = aws_sqs_queue.terraform_queue.arn
+      },
+    ]
+  })
+}
+
 #sqs queue for dead letter
 resource "aws_sqs_queue" "secondary_queue_deadletter" {
   name                              = "backup-queue"

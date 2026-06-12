@@ -60,6 +60,51 @@ resource "aws_lb_listener" "https" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
   }
+
+  # CodeDeploy swaps the default action between the blue and green target
+  # groups during a blue/green deployment, so Terraform must not revert it.
+  lifecycle {
+    ignore_changes = [default_action]
+  }
+}
+
+# Green ("replacement") target group for the API blue/green deployment.
+# CodeDeploy registers the new task set here, validates it, then shifts the
+# production listener from the blue group (aws_lb_target_group.api) to this one.
+#checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
+resource "aws_lb_target_group" "api_green" {
+  name        = "url-shortener-api-green"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/healthz"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+# Test listener used by CodeDeploy to validate the green task set before
+# production traffic is shifted. Not used by CloudFront (production traffic
+# stays on the 443 listener).
+resource "aws_lb_listener" "api_test" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 8443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api_green.arn
+  }
+
+  lifecycle {
+    ignore_changes = [default_action]
+  }
 }
 
 
@@ -161,6 +206,12 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
+  # The container-deploy pipeline rolls new image revisions via the ECS deploy
+  # action; let Terraform manage everything except the task definition.
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   depends_on = [aws_lb_listener.https]
 }
 
@@ -234,6 +285,11 @@ resource "aws_ecs_service" "api" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  # Blue/green rollouts are driven by CodeDeploy, not the ECS controller.
+  deployment_controller {
+    type = "CODE_DEPLOY"
+  }
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.api_security_group_id]
@@ -244,6 +300,12 @@ resource "aws_ecs_service" "api" {
     target_group_arn = aws_lb_target_group.api.arn
     container_name   = "api"
     container_port   = 8080
+  }
+
+  # After the initial create, CodeDeploy owns the task definition, the active
+  # target group, and the running count. Terraform must not fight those.
+  lifecycle {
+    ignore_changes = [task_definition, load_balancer, desired_count]
   }
 
   depends_on = [aws_lb_listener.https]
@@ -278,6 +340,12 @@ resource "aws_ecs_service" "worker" {
     subnets          = var.private_subnet_ids
     security_groups  = [var.worker_security_group_id]
     assign_public_ip = false
+  }
+
+  # The container-deploy pipeline rolls new image revisions via the ECS deploy
+  # action; let Terraform manage everything except the task definition.
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 }
 

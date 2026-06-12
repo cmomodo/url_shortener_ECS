@@ -1,0 +1,12 @@
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        # Placeholder is replaced by CodeDeploy with the ARN of the task
+        # definition it registers from taskdef-api.json.
+        TaskDefinition: "<TASK_DEFINITION>"
+        LoadBalancerInfo:
+          ContainerName: "api"
+          ContainerPort: 8080
+        PlatformVersion: "LATEST"

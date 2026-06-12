@@ -46,11 +46,10 @@ variable "db_username" {
   default     = "postgres"
 }
 
-variable "db_password" {
-  type        = string
-  description = "The master password for the database"
-  default     = "foobarbaz"
-  sensitive   = true
+variable "db_password_wo_version" {
+  type        = number
+  description = "Increment to rotate the RDS master password and SSM database_url (ephemeral write-only)."
+  default     = 1
 }
 
 variable "public_accessible" {
@@ -76,4 +75,34 @@ variable "hosted_zone_id" {
   type        = string
   description = "The ID of the hosted zone"
   default     = "Z030173428PFHIJ7AINAQ"
+}
+
+variable "terraform_state_bucket_name" {
+  type        = string
+  description = "S3 bucket used by the Terraform remote backend (infra/state.tf)."
+  default     = "my-27-state-bucket"
+}
+
+variable "terraform_state_access_role_arns" {
+  type        = list(string)
+  description = "IAM role ARNs allowed to read/write Terraform state (e.g. GitHub Actions OIDC deploy role)."
+  default     = []
+}
+
+variable "terraform_state_enforce_allowlist" {
+  type        = bool
+  description = "When true and terraform_state_access_role_arns is set, deny all other principals on the state bucket."
+  default     = false
+}
+
+variable "github_repo" {
+  type        = string
+  description = "Full GitHub repository ID (owner/name) the container-deploy pipeline tracks."
+  default     = "cmomodo/url_shortener_ECS"
+}
+
+variable "github_branch" {
+  type        = string
+  description = "Git branch the container-deploy pipeline tracks."
+  default     = "securityn"
 }

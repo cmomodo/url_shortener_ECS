@@ -41,7 +41,7 @@ EXPOSE 8081
 
 #healthcheck before finalising stage
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost:8000/health || exit 1
+  CMD wget -qO- http://localhost:8081/health || exit 1
 
 # Run the application
 CMD ["/bin/app"]

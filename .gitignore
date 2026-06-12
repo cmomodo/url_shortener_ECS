@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .DS_Store
 scripts/*.pem
 
@@ -29,3 +31,9 @@ generated-diagrams
 
 #ignore state file
 state.tf
+
+#ignore role.json
+role.json
+
+#ignore .antigravitycli
+.antigravitycli/
