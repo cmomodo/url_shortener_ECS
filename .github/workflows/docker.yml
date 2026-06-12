@@ -1,0 +1,63 @@
+name: Build and Push Docker Images
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [securityn]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-push:
+    name: Build and push ${{ matrix.service }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: api
+            context: ./app
+            dockerfile: ./app/Dockerfile
+          - service: worker
+            context: ./services/worker
+            dockerfile: ./services/worker/Dockerfile
+          - service: dashboard
+            context: ./services/dashboard
+            dockerfile: ./services/dashboard/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
+          SHA=${{ github.sha }}
+          REPO=${{ steps.login-ecr.outputs.registry }}/url-shortener/${{ matrix.service }}
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "sha=${SHA::7}" >> $GITHUB_OUTPUT
+          echo "tags=${REPO}:${SHA::7},${REPO}:${TIMESTAMP},${REPO}:latest" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.timestamp }}
