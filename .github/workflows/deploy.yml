@@ -6,7 +6,7 @@ on:
   workflow_run:
     workflows: [Build and Push Docker Images]
     types: [completed]
-    branches: [rollout]
+    branches: [main, rollout]
   workflow_dispatch:
     inputs:
       image_tag:
