@@ -1,2 +1,0 @@
-ignore_templates:
-  - ci/appspec/*.yaml

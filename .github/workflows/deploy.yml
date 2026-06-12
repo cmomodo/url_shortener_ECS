@@ -1,16 +1,16 @@
-name: Deploy API (CodeDeploy Blue/Green)
+name: Deploy Services (CodeDeploy Blue/Green)
 
 # Triggers after the docker workflow pushes new images to ECR.
-# Can also be triggered manually to redeploy the current image.
+# Can also be triggered manually to redeploy a specific image tag.
 on:
   workflow_run:
     workflows: [Build and Push Docker Images]
     types: [completed]
-    branches: [main]
+    branches: [rollout]
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "ECR image tag to deploy (e.g. abc1234-20260612T120000Z)"
+        description: "ECR image tag to deploy (e.g. abc1234-12345678901)"
         required: true
 
 permissions:
@@ -19,9 +19,19 @@ permissions:
 
 jobs:
   deploy:
-    name: Register task definition and trigger CodeDeploy
+    name: Blue/green deploy ${{ matrix.service }}
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            container_port: 8080
+          - service: dashboard
+            container_port: 8081
+          - service: worker
+            container_port: 8090
 
     steps:
       - uses: actions/checkout@v4
@@ -36,79 +46,148 @@ jobs:
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           else
-            # Derive the same tag the docker workflow produced: <sha7>-<timestamp>
-            # The docker workflow pushed :latest as well, so we use that for the
-            # triggered run. For a reproducible tag, use workflow_dispatch.
-            echo "image_tag=latest" >> $GITHUB_OUTPUT
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            RUN_ID="${{ github.event.workflow_run.id }}"
+            echo "image_tag=${SHA::7}-${RUN_ID}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Resolve AWS account and ECR registry
+      - name: Resolve ECR registry
         id: aws
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGION="${{ vars.AWS_REGION }}"
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
-          echo "account_id=${ACCOUNT_ID}"    >> $GITHUB_OUTPUT
-          echo "region=${REGION}"            >> $GITHUB_OUTPUT
-          echo "registry=${REGISTRY}"        >> $GITHUB_OUTPUT
+          echo "account_id=${ACCOUNT_ID}" >> "$GITHUB_OUTPUT"
+          echo "region=${REGION}" >> "$GITHUB_OUTPUT"
+          echo "registry=${REGISTRY}" >> "$GITHUB_OUTPUT"
 
-      - name: Render task definition
-        id: render
+      - name: Render task definition with new image
         env:
-          IMAGE_URI:            "${{ steps.aws.outputs.registry }}/url-shortener/api:${{ steps.tag.outputs.image_tag }}"
-          AWS_REGION:           "${{ steps.aws.outputs.region }}"
-          EXECUTION_ROLE_ARN:   "arn:aws:iam::${{ steps.aws.outputs.account_id }}:role/url-shortener-ecs-task-execution-role"
-          TASK_ROLE_ARN:        "arn:aws:iam::${{ steps.aws.outputs.account_id }}:role/url-shortener-api-task-role"
-          DATABASE_URL_ARN:     "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/database_url"
-          SQS_QUEUE_URL_ARN:    "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/sqs_queue_url"
-          REDIS_URL_ARN:        "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/redis_url"
-          LOG_GROUP:            "/ecs/api"
+          CLUSTER_NAME: url-shortener
+          SERVICE_NAME: ${{ matrix.service }}
+          IMAGE_URI: ${{ steps.aws.outputs.registry }}/url-shortener/${{ matrix.service }}:${{ steps.tag.outputs.image_tag }}
         run: |
-          python3 ci/docker/render_taskdef.py ci/taskdef/api-taskdef.json /tmp/taskdef-api.json
-          echo "Rendered task definition:"
-          cat /tmp/taskdef-api.json
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME" \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEF" \
+            --query taskDefinition \
+            > /tmp/current-taskdef.json
+
+          cat > /tmp/update_task_image.py <<'PY'
+          import json
+          import sys
+
+          service_name = sys.argv[1]
+          image_uri = sys.argv[2]
+
+          with open("/tmp/current-taskdef.json", encoding="utf-8") as handle:
+              taskdef = json.load(handle)
+
+          allowed_keys = {
+              "family",
+              "taskRoleArn",
+              "executionRoleArn",
+              "networkMode",
+              "containerDefinitions",
+              "volumes",
+              "placementConstraints",
+              "requiresCompatibilities",
+              "cpu",
+              "memory",
+              "pidMode",
+              "ipcMode",
+              "proxyConfiguration",
+              "inferenceAccelerators",
+              "ephemeralStorage",
+              "runtimePlatform",
+          }
+          rendered = {key: taskdef[key] for key in allowed_keys if key in taskdef}
+
+          for container in rendered["containerDefinitions"]:
+              if container["name"] == service_name:
+                  container["image"] = image_uri
+                  break
+          else:
+              raise SystemExit(f"container {service_name!r} not found in task definition")
+
+          with open("/tmp/new-taskdef.json", "w", encoding="utf-8") as handle:
+              json.dump(rendered, handle)
+          PY
+
+          python3 /tmp/update_task_image.py "$SERVICE_NAME" "$IMAGE_URI"
 
       - name: Register task definition
         id: register
         run: |
           TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file:///tmp/taskdef-api.json \
+            --cli-input-json file:///tmp/new-taskdef.json \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
-          echo "task_def_arn=${TASK_DEF_ARN}" >> $GITHUB_OUTPUT
-          echo "Registered: ${TASK_DEF_ARN}"
 
-      - name: Render appspec with task definition ARN
-        id: appspec
+          echo "task_def_arn=${TASK_DEF_ARN}" >> "$GITHUB_OUTPUT"
+          echo "Registered ${TASK_DEF_ARN}"
+
+      - name: Render AppSpec
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+          CONTAINER_PORT: ${{ matrix.container_port }}
+          TASK_DEF_ARN: ${{ steps.register.outputs.task_def_arn }}
         run: |
-          TASK_DEF_ARN="${{ steps.register.outputs.task_def_arn }}"
-          sed "s|<TASK_DEFINITION>|${TASK_DEF_ARN}|g" ci/appspec/api-appspec.yaml > /tmp/appspec-api.yaml
-          echo "Rendered appspec:"
-          cat /tmp/appspec-api.yaml
+          cat > /tmp/render_appspec.py <<'PY'
+          import os
+          import textwrap
+
+          content = textwrap.dedent(f"""\
+          version: 0.0
+          Resources:
+            - TargetService:
+                Type: AWS::ECS::Service
+                Properties:
+                  TaskDefinition: "{os.environ["TASK_DEF_ARN"]}"
+                  LoadBalancerInfo:
+                    ContainerName: "{os.environ["SERVICE_NAME"]}"
+                    ContainerPort: {os.environ["CONTAINER_PORT"]}
+                  PlatformVersion: "LATEST"
+          """)
+
+          with open("/tmp/appspec.yaml", "w", encoding="utf-8") as handle:
+              handle.write(content)
+          PY
+
+          python3 /tmp/render_appspec.py
+          cat /tmp/appspec.yaml
 
       - name: Create CodeDeploy deployment
         id: deploy
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          APPSPEC_CONTENT=$(cat /tmp/appspec-api.yaml)
+          APPSPEC_CONTENT=$(cat /tmp/appspec.yaml)
           APPSPEC_JSON=$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$APPSPEC_CONTENT")
 
           DEPLOYMENT_ID=$(aws deploy create-deployment \
-            --application-name url-shortener-api \
-            --deployment-group-name url-shortener-api \
-            --description "Deploy ${{ steps.tag.outputs.image_tag }} — SHA ${{ github.sha }}" \
+            --application-name "url-shortener-${SERVICE_NAME}" \
+            --deployment-group-name "url-shortener-${SERVICE_NAME}" \
+            --description "Deploy ${SERVICE_NAME}:${IMAGE_TAG} from ${GITHUB_SHA}" \
             --revision "{\"revisionType\":\"AppSpecContent\",\"appSpecContent\":{\"content\":${APPSPEC_JSON}}}" \
             --query 'deploymentId' \
             --output text)
 
-          echo "deployment_id=${DEPLOYMENT_ID}" >> $GITHUB_OUTPUT
+          echo "deployment_id=${DEPLOYMENT_ID}" >> "$GITHUB_OUTPUT"
           echo "Deployment started: ${DEPLOYMENT_ID}"
-          echo "https://console.aws.amazon.com/codesuite/codedeploy/deployments/${DEPLOYMENT_ID}?region=${{ vars.AWS_REGION }}"
 
-      - name: Wait for deployment to succeed
+      - name: Wait for CodeDeploy success
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
         run: |
-          echo "Waiting for deployment ${{ steps.deploy.outputs.deployment_id }}..."
-          aws deploy wait deployment-successful \
-            --deployment-id "${{ steps.deploy.outputs.deployment_id }}"
-          echo "Deployment succeeded."
+          aws deploy wait deployment-successful --deployment-id "$DEPLOYMENT_ID"
+          echo "${SERVICE_NAME} blue/green deployment succeeded."

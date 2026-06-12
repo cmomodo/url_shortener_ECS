@@ -199,6 +199,15 @@ resource "aws_security_group" "worker_tasks" {
   vpc_id      = data.aws_vpc.main.id
 }
 
+resource "aws_vpc_security_group_ingress_rule" "worker_tasks_from_alb" {
+  security_group_id            = aws_security_group.worker_tasks.id
+  description                  = "Worker health port from ALB"
+  ip_protocol                  = "tcp"
+  from_port                    = 8090
+  to_port                      = 8090
+  referenced_security_group_id = aws_security_group.alb.id
+}
+
 resource "aws_vpc_security_group_egress_rule" "worker_tasks_https" {
   security_group_id = aws_security_group.worker_tasks.id
   description       = "HTTPS for AWS APIs and interface endpoints"
@@ -286,25 +295,24 @@ resource "aws_security_group" "alb" {
 # CloudFront prefix list. ALB:80 still accepts redirects for other paths but is not
 # used by this distribution’s origin connection.
 
-# Single rule for 443 (production) and 8443 (CodeDeploy test listener). Each
-# prefix-list CIDR counts toward the per-SG rule quota (~60); a second rule
-# referencing the same CloudFront list would exceed that limit.
+# CloudFront reaches the ALB over HTTPS. The CloudFront managed prefix list
+# keeps ingress restricted without opening the ALB to the public internet.
 resource "aws_vpc_security_group_ingress_rule" "alb_https_cloudfront" {
-  #checkov:skip=CKV_AWS_25: Ingress is restricted to the CloudFront managed prefix list, not 0.0.0.0/0; the 443-8443 range only serves HTTPS (443) and the CodeDeploy blue/green test listener (8443), so port 3389 is never exposed to the internet.
+  #checkov:skip=CKV_AWS_25: Ingress is restricted to the CloudFront managed prefix list, not 0.0.0.0/0.
   security_group_id = aws_security_group.alb.id
-  description       = "HTTPS and API blue/green test listener from CloudFront"
+  description       = "HTTPS from CloudFront"
   ip_protocol       = "tcp"
   from_port         = 443
-  to_port           = 8443
+  to_port           = 443
   prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_tasks" {
   security_group_id = aws_security_group.alb.id
-  description       = "To API and dashboard tasks in the VPC (avoids SG cycle with task groups)"
+  description       = "To ECS tasks in the VPC (avoids SG cycle with task groups)"
   ip_protocol       = "tcp"
   from_port         = 8080
-  to_port           = 8081
+  to_port           = 8090
   cidr_ipv4         = data.aws_vpc.main.cidr_block
 }
 
