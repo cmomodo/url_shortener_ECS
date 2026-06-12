@@ -3,8 +3,9 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        # Placeholder is replaced by CodeDeploy with the ARN of the task
-        # definition it registers from taskdef-api.json.
+        # Replace <TASK_DEFINITION> with the ARN returned by
+        # `aws ecs register-task-definition` before triggering the deployment,
+        # or use `aws ecs deploy --task-definition` which handles this automatically.
         TaskDefinition: "<TASK_DEFINITION>"
         LoadBalancerInfo:
           ContainerName: "api"

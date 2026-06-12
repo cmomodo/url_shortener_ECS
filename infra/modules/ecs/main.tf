@@ -206,8 +206,8 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
-  # CodeDeploy owns the task definition after the first deploy; Terraform must
-  # not revert it on subsequent applies.
+  # ECS rolling update; image updates happen outside Terraform. ignore_changes
+  # prevents Terraform from reverting to the image tag set at first create.
   lifecycle {
     ignore_changes = [task_definition]
   }
@@ -316,23 +316,6 @@ resource "aws_ecs_service" "api" {
   depends_on = [aws_lb_listener.https]
 }
 
-#api output
-output "alb_dns" {
-  value       = aws_lb.main.dns_name
-  description = "App URL: http://<alb_dns>/ui"
-  sensitive   = true
-}
-
-output "alb_arn" {
-  value       = aws_lb.main.arn
-  description = "ARN of the application load balancer."
-}
-
-output "alb_zone_id" {
-  value       = aws_lb.main.zone_id
-  description = "Route 53 zone ID of the application load balancer."
-}
-
 #worker service
 resource "aws_ecs_service" "worker" {
   name            = "worker"
@@ -347,8 +330,8 @@ resource "aws_ecs_service" "worker" {
     assign_public_ip = false
   }
 
-  # CodeDeploy owns the task definition after the first deploy; Terraform must
-  # not revert it on subsequent applies.
+  # ECS rolling update; image updates happen outside Terraform. ignore_changes
+  # prevents Terraform from reverting to the image tag set at first create.
   lifecycle {
     ignore_changes = [task_definition]
   }

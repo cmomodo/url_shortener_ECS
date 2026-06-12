@@ -95,14 +95,8 @@ variable "terraform_state_enforce_allowlist" {
   default     = false
 }
 
-variable "github_repo" {
+variable "dashboard_image_tag" {
   type        = string
-  description = "Full GitHub repository ID (owner/name) the container-deploy pipeline tracks."
-  default     = "cmomodo/url_shortener_ECS"
-}
-
-variable "github_branch" {
-  type        = string
-  description = "Git branch the container-deploy pipeline tracks."
-  default     = "securityn"
+  description = "Immutable ECR tag for the dashboard image."
+  default     = "latest"
 }

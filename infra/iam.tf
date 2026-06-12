@@ -295,4 +295,56 @@ resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
 }
 
+# --- Deployer policy (attach to your GitHub Actions OIDC role or operator role) ---
+# Grants the minimum permissions needed to register a task definition and
+# trigger a CodeDeploy blue/green deployment for the API service.
+resource "aws_iam_policy" "deployer" {
+  name        = "url-shortener-deployer"
+  description = "Allows registering ECS task definitions and triggering CodeDeploy blue/green deployments."
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "RegisterTaskDefinition"
+        Effect = "Allow"
+        Action = [
+          "ecs:RegisterTaskDefinition",
+          "ecs:DescribeTaskDefinition"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "PassTaskRoles"
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          aws_iam_role.ecs_task_execution_role.arn,
+          aws_iam_role.api_task_role.arn
+        ]
+        Condition = {
+          StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
+        }
+      },
+      {
+        Sid    = "TriggerDeployment"
+        Effect = "Allow"
+        Action = [
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetDeployment",
+          "codedeploy:GetDeploymentConfig",
+          "codedeploy:GetApplication",
+          "codedeploy:GetApplicationRevision",
+          "codedeploy:RegisterApplicationRevision"
+        ]
+        Resource = [
+          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-api",
+          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-api/url-shortener-api",
+          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentconfig:*"
+        ]
+      }
+    ]
+  })
+}
+
 

@@ -16,9 +16,9 @@ name: CI
 
 on:
   push:
-    branches: [securityn]
+    branches: [main]
   pull_request:
-    branches: [securityn]
+    branches: [main]
   workflow_dispatch:
     inputs:
       terraform_action:

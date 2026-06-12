@@ -1,0 +1,114 @@
+name: Deploy API (CodeDeploy Blue/Green)
+
+# Triggers after the docker workflow pushes new images to ECR.
+# Can also be triggered manually to redeploy the current image.
+on:
+  workflow_run:
+    workflows: [Build and Push Docker Images]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "ECR image tag to deploy (e.g. abc1234-20260612T120000Z)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Register task definition and trigger CodeDeploy
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            # Derive the same tag the docker workflow produced: <sha7>-<timestamp>
+            # The docker workflow pushed :latest as well, so we use that for the
+            # triggered run. For a reproducible tag, use workflow_dispatch.
+            echo "image_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Resolve AWS account and ECR registry
+        id: aws
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION="${{ vars.AWS_REGION }}"
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+          echo "account_id=${ACCOUNT_ID}"    >> $GITHUB_OUTPUT
+          echo "region=${REGION}"            >> $GITHUB_OUTPUT
+          echo "registry=${REGISTRY}"        >> $GITHUB_OUTPUT
+
+      - name: Render task definition
+        id: render
+        env:
+          IMAGE_URI:            "${{ steps.aws.outputs.registry }}/url-shortener/api:${{ steps.tag.outputs.image_tag }}"
+          AWS_REGION:           "${{ steps.aws.outputs.region }}"
+          EXECUTION_ROLE_ARN:   "arn:aws:iam::${{ steps.aws.outputs.account_id }}:role/url-shortener-ecs-task-execution-role"
+          TASK_ROLE_ARN:        "arn:aws:iam::${{ steps.aws.outputs.account_id }}:role/url-shortener-api-task-role"
+          DATABASE_URL_ARN:     "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/database_url"
+          SQS_QUEUE_URL_ARN:    "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/sqs_queue_url"
+          REDIS_URL_ARN:        "arn:aws:ssm:${{ steps.aws.outputs.region }}:${{ steps.aws.outputs.account_id }}:parameter/url-shortener/redis_url"
+          LOG_GROUP:            "/ecs/api"
+        run: |
+          python3 ci/docker/render_taskdef.py ci/taskdef/api-taskdef.json /tmp/taskdef-api.json
+          echo "Rendered task definition:"
+          cat /tmp/taskdef-api.json
+
+      - name: Register task definition
+        id: register
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/taskdef-api.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "task_def_arn=${TASK_DEF_ARN}" >> $GITHUB_OUTPUT
+          echo "Registered: ${TASK_DEF_ARN}"
+
+      - name: Render appspec with task definition ARN
+        id: appspec
+        run: |
+          TASK_DEF_ARN="${{ steps.register.outputs.task_def_arn }}"
+          sed "s|<TASK_DEFINITION>|${TASK_DEF_ARN}|g" ci/appspec/api-appspec.yaml > /tmp/appspec-api.yaml
+          echo "Rendered appspec:"
+          cat /tmp/appspec-api.yaml
+
+      - name: Create CodeDeploy deployment
+        id: deploy
+        run: |
+          APPSPEC_CONTENT=$(cat /tmp/appspec-api.yaml)
+          APPSPEC_JSON=$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$APPSPEC_CONTENT")
+
+          DEPLOYMENT_ID=$(aws deploy create-deployment \
+            --application-name url-shortener-api \
+            --deployment-group-name url-shortener-api \
+            --description "Deploy ${{ steps.tag.outputs.image_tag }} — SHA ${{ github.sha }}" \
+            --revision "{\"revisionType\":\"AppSpecContent\",\"appSpecContent\":{\"content\":${APPSPEC_JSON}}}" \
+            --query 'deploymentId' \
+            --output text)
+
+          echo "deployment_id=${DEPLOYMENT_ID}" >> $GITHUB_OUTPUT
+          echo "Deployment started: ${DEPLOYMENT_ID}"
+          echo "https://console.aws.amazon.com/codesuite/codedeploy/deployments/${DEPLOYMENT_ID}?region=${{ vars.AWS_REGION }}"
+
+      - name: Wait for deployment to succeed
+        run: |
+          echo "Waiting for deployment ${{ steps.deploy.outputs.deployment_id }}..."
+          aws deploy wait deployment-successful \
+            --deployment-id "${{ steps.deploy.outputs.deployment_id }}"
+          echo "Deployment succeeded."

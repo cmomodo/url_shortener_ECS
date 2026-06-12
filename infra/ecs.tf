@@ -18,7 +18,7 @@ module "ecs" {
   dashboard_repository_url    = data.aws_ecr_repository.dashboard.repository_url
   worker_repository_url       = data.aws_ecr_repository.worker.repository_url
   api_image_tag               = var.api_image_tag
-  dashboard_image_tag         = "latest"
+  dashboard_image_tag         = var.dashboard_image_tag
   worker_image_tag            = var.worker_image_tag
   database_url_parameter_arn  = aws_ssm_parameter.database_url.arn
   sqs_queue_url_parameter_arn = aws_ssm_parameter.sqs_queue_url.arn
