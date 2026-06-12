@@ -170,71 +170,6 @@ resource "aws_lb_listener" "dashboard_test" {
   }
 }
 
-resource "aws_lb_target_group" "worker" {
-  #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
-  name        = "url-shortener-worker"
-  port        = 8090
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    path                = "/healthz"
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    interval            = 30
-  }
-}
-
-resource "aws_lb_target_group" "worker_green" {
-  #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
-  name        = "url-shortener-worker-green"
-  port        = 8090
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    path                = "/healthz"
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    interval            = 30
-  }
-}
-
-resource "aws_lb_listener" "worker_prod" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 8090
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.worker.arn
-  }
-
-  lifecycle {
-    ignore_changes = [default_action]
-  }
-}
-
-resource "aws_lb_listener" "worker_test" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 8091
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.worker_green.arn
-  }
-
-  lifecycle {
-    ignore_changes = [default_action]
-  }
-}
 
 resource "aws_ecs_task_definition" "dashboard" {
   family                   = "dashboard"
@@ -421,10 +356,8 @@ resource "aws_ecs_service" "worker" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  health_check_grace_period_seconds = 60
-
   deployment_controller {
-    type = "CODE_DEPLOY"
+    type = "ECS"
   }
 
   network_configuration {
@@ -433,18 +366,9 @@ resource "aws_ecs_service" "worker" {
     assign_public_ip = false
   }
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.worker.arn
-    container_name   = "worker"
-    container_port   = 8090
-  }
-
-  # CodeDeploy owns the active task definition and target group after create.
   lifecycle {
-    ignore_changes = [task_definition, load_balancer, desired_count]
+    ignore_changes = [task_definition, desired_count]
   }
-
-  depends_on = [aws_lb_listener.worker_prod]
 }
 
 #task definition for the worker
