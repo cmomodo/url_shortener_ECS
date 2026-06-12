@@ -1,5 +1,6 @@
 # CodeDeploy application + deployment group for the API service blue/green
-# rollouts. The container-deploy pipeline triggers deployments against these.
+# rollouts. Deployments are triggered directly (e.g. via GitHub Actions or CLI)
+# by uploading an appspec + rendered task definition as an S3 revision.
 
 resource "aws_codedeploy_app" "api" {
   name             = "url-shortener-api"

@@ -206,8 +206,8 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
-  # The container-deploy pipeline rolls new image revisions via the ECS deploy
-  # action; let Terraform manage everything except the task definition.
+  # CodeDeploy owns the task definition after the first deploy; Terraform must
+  # not revert it on subsequent applies.
   lifecycle {
     ignore_changes = [task_definition]
   }
@@ -285,6 +285,11 @@ resource "aws_ecs_service" "api" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  # Give containers time to pass the ALB health check before CodeDeploy
+  # evaluates the green task set as healthy. Without this, fast-failing health
+  # checks can cause an immediate rollback on every deployment.
+  health_check_grace_period_seconds = 60
+
   # Blue/green rollouts are driven by CodeDeploy, not the ECS controller.
   deployment_controller {
     type = "CODE_DEPLOY"
@@ -342,8 +347,8 @@ resource "aws_ecs_service" "worker" {
     assign_public_ip = false
   }
 
-  # The container-deploy pipeline rolls new image revisions via the ECS deploy
-  # action; let Terraform manage everything except the task definition.
+  # CodeDeploy owns the task definition after the first deploy; Terraform must
+  # not revert it on subsequent applies.
   lifecycle {
     ignore_changes = [task_definition]
   }

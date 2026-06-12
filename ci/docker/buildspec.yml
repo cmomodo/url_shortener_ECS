@@ -3,7 +3,7 @@ version: 0.2
 # Builds the three service images natively on an ARM CodeBuild host (Fargate
 # tasks run ARM64), pushes them to ECR with an immutable tag, then emits the
 # artifacts the pipeline's deploy stage consumes:
-#   - taskdef-api.json / appspec-api.yaml  -> CodeDeploy blue/green (api)
+#   - taskdef-api.json / appspec-*.yaml    -> CodeDeploy blue/green manifests
 #   - imagedefinitions-dashboard.json      -> ECS rolling deploy (dashboard)
 #   - imagedefinitions-worker.json         -> ECS rolling deploy (worker)
 #
@@ -41,6 +41,8 @@ phases:
       - export AWS_REGION="${AWS_DEFAULT_REGION}"
       - python3 ci/docker/render_taskdef.py ci/taskdef/api-taskdef.json taskdef-api.json
       - cp ci/appspec/api-appspec.yaml appspec-api.yaml
+      - cp ci/appspec/dashboard-appspec.yaml appspec-dashboard.yaml
+      - cp ci/appspec/worker-appspec.yaml appspec-worker.yaml
       - echo "Writing imagedefinitions for dashboard and worker..."
       - printf '[{"name":"dashboard","imageUri":"%s"}]' "${ECR_DASHBOARD_REPO}:${IMAGE_TAG}" > imagedefinitions-dashboard.json
       - printf '[{"name":"worker","imageUri":"%s"}]' "${ECR_WORKER_REPO}:${IMAGE_TAG}" > imagedefinitions-worker.json
@@ -50,6 +52,8 @@ artifacts:
   files:
     - taskdef-api.json
     - appspec-api.yaml
+    - appspec-dashboard.yaml
+    - appspec-worker.yaml
     - imagedefinitions-dashboard.json
     - imagedefinitions-worker.json
   discard-paths: yes

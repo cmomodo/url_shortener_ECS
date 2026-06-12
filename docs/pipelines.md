@@ -80,6 +80,8 @@ CodeBuild `post_build` files inside `build_out`:
 | ---- | -------- |
 | `taskdef-api.json` | CodeDeploy (API) |
 | `appspec-api.yaml` | CodeDeploy (API) |
+| `appspec-dashboard.yaml` | Future CodeDeploy dashboard deployment |
+| `appspec-worker.yaml` | Future CodeDeploy worker deployment |
 | `imagedefinitions-dashboard.json` | ECS rolling (dashboard) |
 | `imagedefinitions-worker.json` | ECS rolling (worker) |
 
@@ -271,13 +273,15 @@ Renders the deployment artifacts that the pipeline's deploy stage needs:
 
 | Artifact                          | Used by                 | Purpose                                                   |
 | --------------------------------- | ----------------------- | --------------------------------------------------------- |
-| `taskdef-api.json`                | CodeDeploy (blue/green) | API task definition with the new image URI injected       |
-| `appspec-api.yaml`                | CodeDeploy (blue/green) | Tells CodeDeploy how to shift traffic to the new task set |
-| `imagedefinitions-dashboard.json` | ECS rolling deploy      | Points the dashboard service to the new image             |
-| `imagedefinitions-worker.json`    | ECS rolling deploy      | Points the worker service to the new image                |
+| `taskdef-api.json`                | CodeDeploy (blue/green) | API task definition with the new image URI injected        |
+| `appspec-api.yaml`                | CodeDeploy (blue/green) | Tells CodeDeploy how to shift API traffic                  |
+| `appspec-dashboard.yaml`          | Future CodeDeploy deploy | Dashboard AppSpec for a dashboard CodeDeploy action        |
+| `appspec-worker.yaml`             | Future CodeDeploy deploy | Worker AppSpec for a worker CodeDeploy action              |
+| `imagedefinitions-dashboard.json` | ECS rolling deploy       | Points the dashboard service to the new image              |
+| `imagedefinitions-worker.json`    | ECS rolling deploy       | Points the worker service to the new image                 |
 
 
-These four files are passed as artifacts to the Deploy stage of CodePipeline, which then triggers the deployments in parallel.
+These files are passed as artifacts to the Deploy stage of CodePipeline, which then triggers the deployments in parallel.
 
 ## Creating Pipeline Roles
 
