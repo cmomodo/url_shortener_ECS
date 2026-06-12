@@ -1,0 +1,190 @@
+# Destroy pipeline: tears down all AWS infrastructure managed by Terraform.
+#
+# DANGER: This is a destructive, irreversible operation. It will permanently
+# delete the main URL-shortener stack and, optionally, the ECR repositories.
+#
+# Run order (mirrors the bootstrap order in reverse):
+#   1. Destroy main infra (infra/)          — always
+#   2. Destroy ECR bootstrap (infra-ecr/)   — only when destroy_ecr = true
+#
+# Required GitHub secrets (Settings > Secrets and variables > Actions):
+#
+#   AWS_TERRAFORM_ROLE_ARN  - ARN of the IAM role GitHub Actions assumes via
+#                             OIDC to run Terraform.
+#
+# Required GitHub environment variables:
+#   AWS_REGION             - AWS region where resources are deployed
+#   TF_STATE_BUCKET        - S3 bucket name for Terraform remote state
+#   TF_STATE_KEY           - Path/key for the main infra state file
+#   TF_BOOTSTRAP_STATE_KEY - Path/key for the ECR bootstrap state file
+#   TF_IN_AUTOMATION       - Set to "true"
+
+name: Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: >
+          Type "destroy" to confirm you want to permanently delete all
+          infrastructure. This cannot be undone.
+        required: true
+      destroy_ecr:
+        description: Also destroy ECR repositories (infra-ecr)?
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+concurrency:
+  group: destroy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }}
+  TF_VAR_terraform_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  # ── Safety gate ────────────────────────────────────────────────────────────
+  confirm:
+    name: Confirm destruction
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation input
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "destroy" ]; then
+            echo "Confirmation failed. You must type \"destroy\" exactly."
+            exit 1
+          fi
+          echo "Confirmation accepted. Proceeding with infrastructure destruction."
+
+  # ── Destroy main infra ─────────────────────────────────────────────────────
+  destroy-infra:
+    name: Destroy main infra
+    needs: confirm
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.7"
+
+      - name: Validate GitHub Actions configuration
+        env:
+          AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+        run: |
+          test -n "$AWS_REGION"       || { echo "AWS_REGION repository variable is required"; exit 1; }
+          test -n "$TF_STATE_BUCKET"  || { echo "TF_STATE_BUCKET repository variable is required"; exit 1; }
+          test -n "${{ vars.TF_STATE_KEY }}" || { echo "TF_STATE_KEY repository variable is required"; exit 1; }
+          test -n "$TF_IN_AUTOMATION" || { echo "TF_IN_AUTOMATION repository variable is required"; exit 1; }
+          test -n "$AWS_TERRAFORM_ROLE_ARN" || { echo "AWS_TERRAFORM_ROLE_ARN secret is required"; exit 1; }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init with remote state
+        run: |
+          terraform init \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=${{ vars.TF_STATE_KEY }}" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan destroy
+        run: terraform plan -destroy -input=false -lock-timeout=5m -out=tfplan-destroy
+
+      - name: Save destroy plan text
+        run: terraform show -no-color tfplan-destroy > tfplan-destroy.txt
+
+      - name: Upload destroy plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: destroy-plan-infra-${{ github.run_id }}
+          path: |
+            infra/tfplan-destroy
+            infra/tfplan-destroy.txt
+          retention-days: 14
+
+      - name: Terraform destroy
+        run: terraform apply -auto-approve -input=false tfplan-destroy
+
+  # ── Destroy ECR bootstrap (optional) ───────────────────────────────────────
+  destroy-ecr:
+    name: Destroy ECR bootstrap
+    needs: destroy-infra
+    if: ${{ github.event.inputs.destroy_ecr == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra-ecr
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.7"
+
+      - name: Validate GitHub Actions configuration
+        env:
+          AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+        run: |
+          test -n "$AWS_REGION"       || { echo "AWS_REGION repository variable is required"; exit 1; }
+          test -n "$TF_STATE_BUCKET"  || { echo "TF_STATE_BUCKET repository variable is required"; exit 1; }
+          test -n "${{ vars.TF_BOOTSTRAP_STATE_KEY }}" || { echo "TF_BOOTSTRAP_STATE_KEY repository variable is required"; exit 1; }
+          test -n "$TF_IN_AUTOMATION" || { echo "TF_IN_AUTOMATION repository variable is required"; exit 1; }
+          test -n "$AWS_TERRAFORM_ROLE_ARN" || { echo "AWS_TERRAFORM_ROLE_ARN secret is required"; exit 1; }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init with remote state
+        run: |
+          terraform init \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=${{ vars.TF_BOOTSTRAP_STATE_KEY }}" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan destroy
+        run: terraform plan -destroy -input=false -lock-timeout=5m -out=tfplan-destroy
+
+      - name: Save destroy plan text
+        run: terraform show -no-color tfplan-destroy > tfplan-destroy.txt
+
+      - name: Upload destroy plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: destroy-plan-ecr-${{ github.run_id }}
+          path: |
+            infra-ecr/tfplan-destroy
+            infra-ecr/tfplan-destroy.txt
+          retention-days: 14
+
+      - name: Terraform destroy
+        run: terraform apply -auto-approve -input=false tfplan-destroy
