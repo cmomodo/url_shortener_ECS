@@ -87,20 +87,27 @@ def _init_dynamodb():
 
 def _init_postgres():
     import psycopg2
+    import psycopg2.errors
     from psycopg2.extras import RealDictCursor
 
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     conn.autocommit = True
 
     with conn.cursor() as cur:
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS urls (
-                id     TEXT PRIMARY KEY,
-                url    TEXT NOT NULL,
-                clicks INTEGER NOT NULL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        """)
+        try:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS urls (
+                    id     TEXT PRIMARY KEY,
+                    url    TEXT NOT NULL,
+                    clicks INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+        except (psycopg2.errors.DuplicateTable, psycopg2.errors.UniqueViolation):
+            # A prior container restart may have left an orphaned pg_type entry
+            # for "urls" without completing the table creation.  The table
+            # effectively already exists, so it is safe to continue.
+            pass
 
     def put(short_id: str, url: str):
         with conn.cursor() as cur:
