@@ -172,7 +172,7 @@ Deployment workflow:
 ![Deployment workflow](images/Deploy_infra.png)
 
 Destroy workflow:
-![Destroy workflow](images/Destroy_infra.png)
+![Destroy workflow](images/destroy.png)
 
 ## Grading
 
