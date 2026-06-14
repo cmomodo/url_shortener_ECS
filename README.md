@@ -82,6 +82,7 @@ Design and document the full deployment workflow in your README. Code merge to l
 
 ## GitHub Actions OIDC Setup
 
+![OIDC Setup](images/OIDC.png)
 The pipeline authenticates to AWS using OIDC — no long-lived credentials.
 
 **Role ARN** (set as `AWS_TERRAFORM_ROLE_ARN` in GitHub Actions secrets):
@@ -162,6 +163,16 @@ To smoke test the SQS publish path locally against default AWS, run:
 ```
 
 ---
+
+Screenhots:
+Docker matrix build:
+![Docker matrix build](images/docker_matrix.png)
+
+Deployment workflow:
+![Deployment workflow](images/Deploy_infra.png)
+
+Destroy workflow:
+![Destroy workflow](images/Destroy_infra.png)
 
 ## Grading
 
