@@ -61,18 +61,20 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.api.arn
   }
 
-  # CodeDeploy swaps the default action between the blue and green target
-  # groups during a blue/green deployment, so Terraform must not revert it.
   lifecycle {
     ignore_changes = [default_action]
   }
+
+  # CodeDeploy can swap the green TG onto this prod listener out-of-band. Declare
+  # the dependency so this listener is destroyed before the green TG (avoids
+  # ResourceInUse on `terraform destroy`).
+  depends_on = [aws_lb_target_group.api_green]
 }
 
-# Green ("replacement") target group for the API blue/green deployment.
-# CodeDeploy registers the new task set here, validates it, then shifts the
-# production listener from the blue group (aws_lb_target_group.api) to this one.
-#checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
+
+
 resource "aws_lb_target_group" "api_green" {
+  #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
   name        = "url-shortener-api-green"
   port        = 8080
   protocol    = "HTTP"
@@ -87,9 +89,6 @@ resource "aws_lb_target_group" "api_green" {
   }
 }
 
-# Test listener used by CodeDeploy to validate the green task set before
-# production traffic is shifted. Not used by CloudFront (production traffic
-# stays on the 443 listener).
 resource "aws_lb_listener" "api_test" {
   load_balancer_arn = aws_lb.main.arn
   port              = 8443
@@ -105,13 +104,31 @@ resource "aws_lb_listener" "api_test" {
   lifecycle {
     ignore_changes = [default_action]
   }
+
+  # CodeDeploy can swap the blue TG onto this test listener out-of-band. Declare
+  # the dependency so this listener is destroyed before the blue TG.
+  depends_on = [aws_lb_target_group.api]
 }
-
-
 
 resource "aws_lb_target_group" "dashboard" {
   #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
   name        = "url-shortener-dashboard"
+  port        = 8081
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/healthz"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+resource "aws_lb_target_group" "dashboard_green" {
+  #checkov:skip=CKV_AWS_378: HTTP to container targets; TLS terminates at the public ALB
+  name        = "url-shortener-dashboard-green"
   port        = 8081
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -139,7 +156,37 @@ resource "aws_lb_listener_rule" "dashboard" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.dashboard.arn
   }
+
+  lifecycle {
+    ignore_changes = [action]
+  }
+
+  # CodeDeploy can swap the green dashboard TG onto this prod rule out-of-band.
+  # Ensure the rule is destroyed before the green TG.
+  depends_on = [aws_lb_target_group.dashboard_green]
 }
+
+resource "aws_lb_listener" "dashboard_test" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 8444
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.dashboard_green.arn
+  }
+
+  lifecycle {
+    ignore_changes = [default_action]
+  }
+
+  # CodeDeploy can swap the blue dashboard TG onto this test listener out-of-band.
+  # Ensure the listener is destroyed before the blue TG.
+  depends_on = [aws_lb_target_group.dashboard]
+}
+
 
 resource "aws_ecs_task_definition" "dashboard" {
   family                   = "dashboard"
@@ -194,6 +241,12 @@ resource "aws_ecs_service" "dashboard" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  health_check_grace_period_seconds = 60
+
+  deployment_controller {
+    type = "CODE_DEPLOY"
+  }
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.dashboard_security_group_id]
@@ -206,10 +259,9 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
-  # ECS rolling update; image updates happen outside Terraform. ignore_changes
-  # prevents Terraform from reverting to the image tag set at first create.
+  # CodeDeploy owns the active task definition and target group after create.
   lifecycle {
-    ignore_changes = [task_definition]
+    ignore_changes = [task_definition, load_balancer, desired_count]
   }
 
   depends_on = [aws_lb_listener.https]
@@ -285,12 +337,10 @@ resource "aws_ecs_service" "api" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  # Give containers time to pass the ALB health check before CodeDeploy
-  # evaluates the green task set as healthy. Without this, fast-failing health
-  # checks can cause an immediate rollback on every deployment.
+  # Give replacement tasks time to pass the ALB health check before CodeDeploy
+  # evaluates the green task set.
   health_check_grace_period_seconds = 60
 
-  # Blue/green rollouts are driven by CodeDeploy, not the ECS controller.
   deployment_controller {
     type = "CODE_DEPLOY"
   }
@@ -307,8 +357,7 @@ resource "aws_ecs_service" "api" {
     container_port   = 8080
   }
 
-  # After the initial create, CodeDeploy owns the task definition, the active
-  # target group, and the running count. Terraform must not fight those.
+  # CodeDeploy owns the active task definition and target group after create.
   lifecycle {
     ignore_changes = [task_definition, load_balancer, desired_count]
   }
@@ -324,16 +373,18 @@ resource "aws_ecs_service" "worker" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  deployment_controller {
+    type = "ECS"
+  }
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.worker_security_group_id]
     assign_public_ip = false
   }
 
-  # ECS rolling update; image updates happen outside Terraform. ignore_changes
-  # prevents Terraform from reverting to the image tag set at first create.
   lifecycle {
-    ignore_changes = [task_definition]
+    ignore_changes = [task_definition, desired_count]
   }
 }
 

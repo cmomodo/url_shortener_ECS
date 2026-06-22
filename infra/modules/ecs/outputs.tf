@@ -39,12 +39,28 @@ output "api_task_family" {
   description = "Task definition family for the API service."
 }
 
-output "codedeploy_app_name" {
-  value       = aws_codedeploy_app.api.name
-  description = "CodeDeploy application name for the API blue/green deployments."
+output "dashboard_task_family" {
+  value       = aws_ecs_task_definition.dashboard.family
+  description = "Task definition family for the dashboard service."
 }
 
-output "codedeploy_deployment_group_name" {
-  value       = aws_codedeploy_deployment_group.api.deployment_group_name
-  description = "CodeDeploy deployment group name for the API service."
+output "worker_task_family" {
+  value       = aws_ecs_task_definition.worker.family
+  description = "Task definition family for the worker service."
+}
+
+output "codedeploy_app_names" {
+  value = {
+    api       = aws_codedeploy_app.api.name
+    dashboard = aws_codedeploy_app.dashboard.name
+  }
+  description = "CodeDeploy application names by blue/green service."
+}
+
+output "codedeploy_deployment_group_names" {
+  value = {
+    api       = aws_codedeploy_deployment_group.api.deployment_group_name
+    dashboard = aws_codedeploy_deployment_group.dashboard.deployment_group_name
+  }
+  description = "CodeDeploy deployment group names by blue/green service."
 }

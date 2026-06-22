@@ -16,9 +16,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [rollout]
   pull_request:
-    branches: [main]
+    branches: [rollout]
   workflow_dispatch:
     inputs:
       terraform_action:

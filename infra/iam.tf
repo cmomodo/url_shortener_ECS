@@ -275,8 +275,7 @@ resource "aws_iam_role_policy" "worker_task_sqs_policy" {
   })
 }
 
-# Service role assumed by CodeDeploy to manage ECS blue/green deployments
-# (shifting ALB target groups and updating the ECS service).
+# Service role assumed by CodeDeploy to manage ECS blue/green deployments.
 resource "aws_iam_role" "codedeploy" {
   name = "url-shortener-codedeploy"
 
@@ -296,15 +295,40 @@ resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
 }
 
 # --- Deployer policy (attach to your GitHub Actions OIDC role or operator role) ---
-# Grants the minimum permissions needed to register a task definition and
-# trigger a CodeDeploy blue/green deployment for the API service.
+# Grants the minimum permissions needed to register task definitions and trigger
+# CodeDeploy blue/green deployments for API and dashboard, plus ECS rolling
+# deployments for the worker.
 resource "aws_iam_policy" "deployer" {
   name        = "url-shortener-deployer"
-  description = "Allows registering ECS task definitions and triggering CodeDeploy blue/green deployments."
+  description = "Allows building/pushing ECR images, registering ECS task definitions, and deploying services."
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Sid      = "ECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPush"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage"
+        ]
+        Resource = [
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/api",
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/dashboard",
+          "arn:aws:ecr:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:repository/url-shortener/worker"
+        ]
+      },
       {
         Sid    = "RegisterTaskDefinition"
         Effect = "Allow"
@@ -320,14 +344,29 @@ resource "aws_iam_policy" "deployer" {
         Action = ["iam:PassRole"]
         Resource = [
           aws_iam_role.ecs_task_execution_role.arn,
-          aws_iam_role.api_task_role.arn
+          aws_iam_role.api_task_role.arn,
+          aws_iam_role.worker_task_role.arn
         ]
         Condition = {
           StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
         }
       },
       {
-        Sid    = "TriggerDeployment"
+        Sid    = "ReadEcsServiceState"
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeClusters",
+          "ecs:DescribeServices"
+        ]
+        Resource = [
+          "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster/url-shortener",
+          "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/url-shortener/api",
+          "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/url-shortener/dashboard",
+          "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/url-shortener/worker"
+        ]
+      },
+      {
+        Sid    = "TriggerCodeDeploy"
         Effect = "Allow"
         Action = [
           "codedeploy:CreateDeployment",
@@ -339,9 +378,17 @@ resource "aws_iam_policy" "deployer" {
         ]
         Resource = [
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-api",
+          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:application:url-shortener-dashboard",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-api/url-shortener-api",
+          "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentgroup:url-shortener-dashboard/url-shortener-dashboard",
           "arn:aws:codedeploy:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:deploymentconfig:*"
         ]
+      },
+      {
+        Sid      = "UpdateWorkerService"
+        Effect   = "Allow"
+        Action   = ["ecs:UpdateService"]
+        Resource = "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/url-shortener/worker"
       }
     ]
   })

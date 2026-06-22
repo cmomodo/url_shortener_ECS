@@ -1,10 +1,13 @@
 name: Build and Push Docker Images
 
 on:
+  push:
+    branches: [rollout]
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [main]
+    branches: [main, rollout]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,7 +16,7 @@ permissions:
 jobs:
   build-push:
     name: Build and push ${{ matrix.service }}
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,12 +58,18 @@ jobs:
         id: meta
         run: |
           TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
-          SHA="${{ github.sha }}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            SHA="${{ github.event.workflow_run.head_sha }}"
+          else
+            SHA="${{ github.sha }}"
+          fi
+          IMAGE_TAG="${SHA::7}-${{ github.run_id }}"
           REPO="${{ steps.login-ecr.outputs.registry }}/url-shortener/${{ matrix.service }}"
-          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "sha=${SHA::7}"          >> $GITHUB_OUTPUT
-          echo "image_tag=${SHA::7}-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "tags=${REPO}:${SHA::7}-${TIMESTAMP},${REPO}:latest" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}"      >> $GITHUB_OUTPUT
+          echo "sha=${SHA::7}"              >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}"     >> $GITHUB_OUTPUT
+          echo "tags=${REPO}:${IMAGE_TAG}"  >> $GITHUB_OUTPUT
+          echo "full_sha=${SHA}"            >> $GITHUB_OUTPUT
 
       - name: Build and push (linux/arm64)
         uses: docker/build-push-action@v5
@@ -71,8 +80,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.full_sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.timestamp }}
-
-    outputs:
-      image_tag: ${{ steps.meta.outputs.image_tag }}
