@@ -9,10 +9,6 @@
 
 A URL shortener with click analytics on AWS. Three services, one cluster. The deployment uses RDS PostgreSQL as the system of record, Redis for API caching, and SQS for asynchronous click analytics. We will use Github Actions for CI/CD. We will use Terraform for infrastructure as code. For local development, we will use Docker Compose. We have pre-commits hooks for linting and secure push.
 
-# System Design
-
-![URL Shortener Architecture](images/URL_shortener.png)
-
 ## Services
 
 | Service       | Language | Port | Description                                                              |
@@ -24,6 +20,12 @@ A URL shortener with click analytics on AWS. Three services, one cluster. The de
 Read the code. Environment variables and endpoints are in the source files.
 
 ---
+
+# System Design
+
+![URL Shortener Architecture](images/URL_shortener.png)
+
+For a compact high-level overview, see [docs/architecture-overview.md](docs/architecture-overview.md).
 
 ## Requisites
 
@@ -63,11 +65,9 @@ RDS PostgreSQL is the lowest-risk fit for the current application because the wo
 
 **Aurora DSQL** is a promising serverless distributed SQL option, but it is aimed at active-active and distributed SQL workloads. This service does not currently need multi-region writes or distributed transaction scale, so DSQL would add novelty and migration risk without solving a current problem.
 
-### The Deployment Question
+### For the Deployment
 
-You've deployed the service. Now a developer merges a PR and expects their change live within minutes - safely, with zero downtime.
-
-Design and document the full deployment workflow in your README. Code merge to live traffic.
+We used Blue/Green deployment for the services. This is because we can easily roll back to the previous version if something goes wrong. We can also test the new version in a staging environment before deploying it to production.
 
 ### Deliverables
 
@@ -184,3 +184,10 @@ Destroy workflow:
 - You can explain every resource you created
 
 **Tear down when done.** ALB + WAF cost money even idle.
+
+## Improvements:
+
+- Tflint check
+- Use Terragrunt for multi_staging
+- Improve Deployment workflow
+- Local Sast setup

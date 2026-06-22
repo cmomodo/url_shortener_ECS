@@ -64,6 +64,11 @@ resource "aws_lb_listener" "https" {
   lifecycle {
     ignore_changes = [default_action]
   }
+
+  # CodeDeploy can swap the green TG onto this prod listener out-of-band. Declare
+  # the dependency so this listener is destroyed before the green TG (avoids
+  # ResourceInUse on `terraform destroy`).
+  depends_on = [aws_lb_target_group.api_green]
 }
 
 
@@ -99,6 +104,10 @@ resource "aws_lb_listener" "api_test" {
   lifecycle {
     ignore_changes = [default_action]
   }
+
+  # CodeDeploy can swap the blue TG onto this test listener out-of-band. Declare
+  # the dependency so this listener is destroyed before the blue TG.
+  depends_on = [aws_lb_target_group.api]
 }
 
 resource "aws_lb_target_group" "dashboard" {
@@ -151,6 +160,10 @@ resource "aws_lb_listener_rule" "dashboard" {
   lifecycle {
     ignore_changes = [action]
   }
+
+  # CodeDeploy can swap the green dashboard TG onto this prod rule out-of-band.
+  # Ensure the rule is destroyed before the green TG.
+  depends_on = [aws_lb_target_group.dashboard_green]
 }
 
 resource "aws_lb_listener" "dashboard_test" {
@@ -168,6 +181,10 @@ resource "aws_lb_listener" "dashboard_test" {
   lifecycle {
     ignore_changes = [default_action]
   }
+
+  # CodeDeploy can swap the blue dashboard TG onto this test listener out-of-band.
+  # Ensure the listener is destroyed before the blue TG.
+  depends_on = [aws_lb_target_group.dashboard]
 }
 
 
