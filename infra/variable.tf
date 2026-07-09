@@ -1,9 +1,3 @@
-variable "identifier" {
-  type        = string
-  description = "The name of the AWS RDS instance"
-  default     = "rds-demo"
-}
-
 variable "db_identifier" {
   type        = string
   description = "The database instance identifier"

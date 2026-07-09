@@ -232,6 +232,12 @@ resource "aws_ecs_task_definition" "dashboard" {
       }
     }
   }])
+
+  # CI/CD owns image updates via register-task-definition; ignore so Terraform
+  # does not revert the container image on apply.
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 }
 
 resource "aws_ecs_service" "dashboard" {
@@ -327,6 +333,12 @@ resource "aws_ecs_task_definition" "api" {
       }
     }
   }])
+
+  # CI/CD owns image updates via register-task-definition; ignore so Terraform
+  # does not revert the container image on apply.
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 }
 
 #ecs service definition
@@ -440,4 +452,10 @@ resource "aws_ecs_task_definition" "worker" {
       }
     }
   ])
+
+  # CI/CD owns image updates via register-task-definition; ignore so Terraform
+  # does not revert the container image on apply.
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 }

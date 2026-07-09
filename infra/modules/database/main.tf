@@ -1,3 +1,11 @@
+# Ephemeral password: not stored in Terraform state or plan files.
+# password_wo_version / value_wo_version control when a new value is pushed to AWS.
+ephemeral "random_password" "db_master" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   name = "url-shortener-rds-monitoring"
 
@@ -57,14 +65,14 @@ resource "aws_db_instance" "url_shortener" {
 
   allocated_storage      = var.allocated_storage
   storage_encrypted      = true
-  kms_key_id             = aws_kms_key.app.arn
+  kms_key_id             = var.kms_key_arn
   db_name                = var.db_name
   username               = var.db_username
   password_wo            = ephemeral.random_password.db_master.result
   password_wo_version    = var.db_password_wo_version
   parameter_group_name   = aws_db_parameter_group.url_shortener.name
   db_subnet_group_name   = aws_db_subnet_group.default.name
-  vpc_security_group_ids = [module.vpc.rds_security_group_id]
+  vpc_security_group_ids = var.security_group_ids
   publicly_accessible    = var.public_accessible
 
   copy_tags_to_snapshot = true
@@ -76,7 +84,7 @@ resource "aws_db_instance" "url_shortener" {
   multi_az                              = false
   auto_minor_version_upgrade            = true
   performance_insights_enabled          = true
-  performance_insights_kms_key_id       = aws_kms_key.app.arn
+  performance_insights_kms_key_id       = var.kms_key_arn
   performance_insights_retention_period = 7
   monitoring_interval                   = 60
   monitoring_role_arn                   = aws_iam_role.rds_enhanced_monitoring.arn
@@ -90,7 +98,7 @@ resource "aws_db_instance" "url_shortener" {
 # Database subnets come from the VPC layer and are created before RDS.
 resource "aws_db_subnet_group" "default" {
   name       = "main-v2"
-  subnet_ids = module.vpc.private_subnet_ids
+  subnet_ids = var.private_subnet_ids
 
   tags = {
     Name = "My DB subnet group"

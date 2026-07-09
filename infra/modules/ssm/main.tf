@@ -1,9 +1,9 @@
 resource "aws_ssm_parameter" "database_url" {
   name   = "/url-shortener/database_url"
   type   = "SecureString"
-  key_id = aws_kms_key.app.id
+  key_id = var.kms_key_id
 
-  value_wo = "postgresql://${var.db_username}:${ephemeral.random_password.db_master.result}@${aws_db_instance.url_shortener.endpoint}/${var.db_name}"
+  value_wo = "postgresql://${var.db_username}:${var.db_password}@${var.db_endpoint}/${var.db_name}"
   # Bump with db_password_wo_version when rotating the DB password.
   value_wo_version = var.db_password_wo_version
 }
@@ -11,13 +11,13 @@ resource "aws_ssm_parameter" "database_url" {
 resource "aws_ssm_parameter" "sqs_queue_url" {
   name   = "/url-shortener/sqs_queue_url"
   type   = "SecureString"
-  key_id = aws_kms_key.app.id
-  value  = aws_sqs_queue.terraform_queue.url
+  key_id = var.kms_key_id
+  value  = var.sqs_queue_url
 }
 
 resource "aws_ssm_parameter" "redis_url" {
   name   = "/url-shortener/redis_url"
   type   = "SecureString"
-  key_id = aws_kms_key.app.id
-  value  = "rediss://:${urlencode(random_password.redis_auth.result)}@${module.elasticcache.primary_endpoint_address}:${module.elasticcache.port}"
+  key_id = var.kms_key_id
+  value  = "rediss://:${urlencode(var.redis_auth_token)}@${var.redis_endpoint}:${var.redis_port}"
 }

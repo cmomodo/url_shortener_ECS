@@ -1,3 +1,8 @@
+# ALB access logs, regional WAF for the ALB, and WAF logging via Kinesis Firehose.
+
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 resource "aws_s3_bucket" "alb_logs" {
   bucket        = "url-shortener-alb-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = false
@@ -255,7 +260,7 @@ resource "aws_wafv2_web_acl" "alb" {
 
 # Enable WAF logging for the ALB (required by CKV2_AWS_31). WAF logs must go to Kinesis Firehose.
 resource "aws_wafv2_web_acl_association" "alb" {
-  resource_arn = module.ecs.alb_arn
+  resource_arn = var.alb_arn
   web_acl_arn  = aws_wafv2_web_acl.alb.arn
 }
 
@@ -310,7 +315,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.app.arn
+      kms_master_key_id = var.kms_key_arn
     }
   }
 }
@@ -378,7 +383,7 @@ resource "aws_iam_role_policy" "firehose_waf_logs" {
           "kms:GenerateDataKey",
           "kms:DescribeKey"
         ]
-        Resource = aws_kms_key.app.arn
+        Resource = var.kms_key_arn
       },
       {
         Effect = "Allow"
@@ -399,7 +404,7 @@ resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
   server_side_encryption {
     enabled  = true
     key_type = "CUSTOMER_MANAGED_CMK"
-    key_arn  = aws_kms_key.app.arn
+    key_arn  = var.kms_key_arn
   }
 
   extended_s3_configuration {

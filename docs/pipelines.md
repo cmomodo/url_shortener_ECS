@@ -56,7 +56,7 @@ as data sources.
 
 | Trigger | Condition | What happens |
 | ------- | --------- | ------------ |
-| Push to `rollout` | Only `infra-ecr/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
+| Push to `rollout` | Only `infra/ecr-chicken/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
 | Pull request to `rollout` | Same path filter | plan only |
 | Manual (`workflow_dispatch`) | Always | choose `plan` or `apply` |
 

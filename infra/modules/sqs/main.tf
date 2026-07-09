@@ -5,7 +5,7 @@ resource "aws_sqs_queue" "terraform_queue" {
   max_message_size                  = 2048
   message_retention_seconds         = 86400
   receive_wait_time_seconds         = 10
-  kms_master_key_id                 = aws_kms_key.app.id
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.secondary_queue_deadletter.arn
@@ -28,7 +28,7 @@ resource "aws_sqs_queue_policy" "terraform_queue" {
         Sid    = "AllowApiTaskSend"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.api_task_role.arn
+          AWS = var.api_task_role_arn
         }
         Action = [
           "sqs:SendMessage",
@@ -41,7 +41,7 @@ resource "aws_sqs_queue_policy" "terraform_queue" {
         Sid    = "AllowWorkerTaskConsume"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.worker_task_role.arn
+          AWS = var.worker_task_role_arn
         }
         Action = [
           "sqs:ReceiveMessage",
@@ -59,7 +59,7 @@ resource "aws_sqs_queue_policy" "terraform_queue" {
 #sqs queue for dead letter
 resource "aws_sqs_queue" "secondary_queue_deadletter" {
   name                              = "backup-queue"
-  kms_master_key_id                 = aws_kms_key.app.id
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 }
 
