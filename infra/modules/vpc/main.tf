@@ -37,6 +37,7 @@ resource "aws_route_table_association" "private" {
 
 # RDS security group inside the VPC layer.
 resource "aws_security_group" "rds_service" {
+  #checkov:skip=CKV2_AWS_5: Security group is attached to the RDS instance through the database module.
   name        = "rds-service"
   description = "PostgreSQL from ECS API, dashboard, and worker tasks only"
   vpc_id      = data.aws_vpc.main.id

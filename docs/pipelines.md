@@ -14,6 +14,37 @@ The project uses **GitHub Actions** for automation. All workflows target the
 
 ## CI/CD Features
 
+### Local Pre-push Checks
+
+The repository runs two pre-push hooks before Git sends commits to GitHub:
+
+```bash
+terraform fmt -recursive -check
+checkov -d infra
+```
+
+If a new local branch has no upstream yet, publish it with:
+
+```bash
+git push --set-upstream origin <branch>
+```
+
+Do not bypass a failed hook until the finding has been investigated. The
+current Checkov exceptions are documented inline next to the affected
+resources:
+
+| Check | Resource | Reason for the exception |
+| ----- | -------- | ------------------------ |
+| `CKV_AWS_136` | Bootstrap ECR repositories | The existing development repositories use ECR-managed AES-256 encryption. Changing their encryption configuration would replace the repositories and risk losing stored images. |
+| `CKV2_AWS_5` | RDS security group | The group is attached to the RDS instance through an output from the VPC module and an input to the database module; Checkov does not resolve this cross-module relationship. |
+| `CKV2_AWS_28` | Application Load Balancer | A regional WAF is associated with the ALB in the observability module using the ALB module output; Checkov does not resolve this cross-module relationship. |
+
+Run the hooks manually from the repository root when troubleshooting:
+
+```bash
+pre-commit run --hook-stage pre-push --all-files
+```
+
 ### Concurrency
 
 Terraform workflows use a `concurrency` group with `cancel-in-progress: true`

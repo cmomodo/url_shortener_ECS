@@ -1,6 +1,7 @@
 #load balancer for the ecs service
 resource "aws_lb" "main" {
   #checkov:skip=CKV_AWS_150: Deletion protection intentionally disabled for easier teardown in this environment
+  #checkov:skip=CKV2_AWS_28: A regional WAF is associated with this ALB through the observability module.
   name                       = "url-shortener"
   internal                   = false
   load_balancer_type         = "application"
