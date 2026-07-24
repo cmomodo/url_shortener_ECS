@@ -10,6 +10,70 @@ terraform init
 terraform apply
 ```
 
+Run the main stack only from the `rollout` revision (or from a commit known to
+have the same module layout as `rollout`). The remote state records Terraform
+resource addresses, so running an older flat configuration against newer
+module-based state can produce a plan that destroys module resources and then
+tries to recreate the same AWS names.
+
+Always review a saved plan before applying:
+
+```bash
+cd infra
+terraform plan -out=tfplan
+terraform show tfplan
+terraform apply tfplan
+terraform plan -detailed-exitcode
+```
+
+The last command returns exit code `0` only when AWS and the configuration are
+fully converged.
+
+## Recovering an interrupted or mismatched apply
+
+Errors such as `EntityAlreadyExists`, `BucketAlreadyExists`, or a VPC endpoint
+DNS/route conflict normally mean the AWS resource exists but the selected
+Terraform state does not track it. Do not delete a logs bucket or another
+durable resource merely to make the next apply pass.
+
+1. Stop competing Terraform runs and confirm the S3 state lock is gone.
+2. Back up the current state with `terraform state pull`.
+3. Compare the configuration revision, state resource addresses, and live AWS
+   resources before changing state.
+4. If one verified resource is missing from state, import it at the address
+   used by the current configuration.
+5. Run a fresh saved plan and apply only after confirming that it contains no
+   unintended deletes or replacements.
+6. Finish with `terraform plan -detailed-exitcode`; exit code `0` is the
+   recovery success criterion.
+
+For example, if creation of the S3 gateway endpoint fails because the private
+route table already has the S3 prefix-list route:
+
+```bash
+aws ec2 describe-vpc-endpoints \
+  --region us-east-1 \
+  --filters Name=vpc-id,Values=<vpc-id> \
+            Name=service-name,Values=com.amazonaws.us-east-1.s3
+
+terraform import \
+  'module.endpoints.aws_vpc_endpoint.s3' \
+  <verified-vpc-endpoint-id>
+
+terraform plan -detailed-exitcode
+```
+
+Verify the VPC ID, service name, route table, and expected `Name` tag before
+importing. Import adopts the existing resource; it does not recreate or delete
+it.
+
+Restoring an older S3 state-object version is a broader recovery operation and
+should be used only when the failed run changed many addresses. Preserve the
+current state first, then verify the candidate state's lineage, serial,
+resource count, module addresses, and S3 object checksum before using
+`terraform state push`. Never use `terraform state rm` as a workaround for the
+retained ALB logs bucket.
+
 ## Recent security/compliance changes (Checkov)
 
 To pass the latest Checkov policies, the Terraform was updated to:

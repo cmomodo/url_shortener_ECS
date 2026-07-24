@@ -37,6 +37,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
 
   rule {
+    # Reject customer-provided encryption keys while retaining the SSE-S3
+    # default required by ALB log delivery.
+    blocked_encryption_types = ["SSE-C"]
+    bucket_key_enabled       = false
+
     apply_server_side_encryption_by_default {
       # ALB access log delivery only supports S3-managed encryption keys.
       sse_algorithm = "AES256"
@@ -106,6 +111,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs_access" 
   bucket = aws_s3_bucket.alb_logs_access.id
 
   rule {
+    blocked_encryption_types = ["SSE-C"]
+    bucket_key_enabled       = false
+
     apply_server_side_encryption_by_default {
       # S3 server access log delivery only supports S3-managed encryption keys.
       sse_algorithm = "AES256"
@@ -356,6 +364,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
   bucket = aws_s3_bucket.waf_logs.id
 
   rule {
+    blocked_encryption_types = ["SSE-C"]
+    bucket_key_enabled       = false
+
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = var.kms_key_arn

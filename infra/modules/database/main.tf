@@ -41,8 +41,9 @@ resource "aws_db_parameter_group" "url_shortener" {
   }
 
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 
   lifecycle {
