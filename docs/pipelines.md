@@ -35,7 +35,7 @@ resources:
 
 | Check | Resource | Reason for the exception |
 | ----- | -------- | ------------------------ |
-| `CKV_AWS_136` | Bootstrap ECR repositories | The existing development repositories use ECR-managed AES-256 encryption. Changing their encryption configuration would replace the repositories and risk losing stored images. |
+| `CKV_AWS_136` | Bootstrap ECR repositories | The existing development repositories use AES-256 with Amazon S3-managed keys. Adopting KMS encryption requires replacing the repositories and risks losing stored images. |
 | `CKV2_AWS_5` | RDS security group | The group is attached to the RDS instance through an output from the VPC module and an input to the database module; Checkov does not resolve this cross-module relationship. |
 | `CKV2_AWS_28` | Application Load Balancer | A regional WAF is associated with the ALB in the observability module using the ALB module output; Checkov does not resolve this cross-module relationship. |
 

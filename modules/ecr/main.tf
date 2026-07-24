@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "api" {
-  #checkov:skip=CKV_AWS_136: Existing development repository uses ECR-managed AES-256 encryption; changing encryption would replace it and delete stored images.
+  #checkov:skip=CKV_AWS_136: Existing dev repository uses AES-256 with S3-managed keys; adopting KMS requires replacement.
   name                 = "url-shortener/api"
   image_tag_mutability = "IMMUTABLE"
 
@@ -17,7 +17,7 @@ resource "aws_ecr_repository" "api" {
 }
 
 resource "aws_ecr_repository" "dashboard" {
-  #checkov:skip=CKV_AWS_136: Existing development repository uses ECR-managed AES-256 encryption; changing encryption would replace it and delete stored images.
+  #checkov:skip=CKV_AWS_136: Existing dev repository uses AES-256 with S3-managed keys; adopting KMS requires replacement.
   name                 = "url-shortener/dashboard"
   image_tag_mutability = "IMMUTABLE"
 
@@ -35,7 +35,7 @@ resource "aws_ecr_repository" "dashboard" {
 }
 
 resource "aws_ecr_repository" "worker" {
-  #checkov:skip=CKV_AWS_136: Existing development repository uses ECR-managed AES-256 encryption; changing encryption would replace it and delete stored images.
+  #checkov:skip=CKV_AWS_136: Existing dev repository uses AES-256 with S3-managed keys; adopting KMS requires replacement.
   name                 = "url-shortener/worker"
   image_tag_mutability = "IMMUTABLE"
 
