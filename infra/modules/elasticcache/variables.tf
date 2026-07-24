@@ -44,12 +44,6 @@ variable "security_group_ids" {
   description = "Security group IDs attached to the replication group"
 }
 
-variable "auth_token" {
-  type        = string
-  description = "Redis AUTH token (16–128 chars; required when transit encryption is enabled)"
-  sensitive   = true
-}
-
 variable "kms_key_id" {
   type        = string
   description = "KMS key ID or ARN for ElastiCache at-rest encryption"

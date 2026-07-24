@@ -47,19 +47,19 @@ resource "aws_codedeploy_deployment_group" "api" {
   load_balancer_info {
     target_group_pair_info {
       prod_traffic_route {
-        listener_arns = [aws_lb_listener.https.arn]
+        listener_arns = [var.https_listener_arn]
       }
 
       test_traffic_route {
-        listener_arns = [aws_lb_listener.api_test.arn]
+        listener_arns = [var.api_test_listener_arn]
       }
 
       target_group {
-        name = aws_lb_target_group.api.name
+        name = var.api_target_group_name
       }
 
       target_group {
-        name = aws_lb_target_group.api_green.name
+        name = var.api_green_target_group_name
       }
     }
   }
@@ -100,19 +100,19 @@ resource "aws_codedeploy_deployment_group" "dashboard" {
   load_balancer_info {
     target_group_pair_info {
       prod_traffic_route {
-        listener_arns = [aws_lb_listener.https.arn]
+        listener_arns = [var.https_listener_arn]
       }
 
       test_traffic_route {
-        listener_arns = [aws_lb_listener.dashboard_test.arn]
+        listener_arns = [var.dashboard_test_listener_arn]
       }
 
       target_group {
-        name = aws_lb_target_group.dashboard.name
+        name = var.dashboard_target_group_name
       }
 
       target_group {
-        name = aws_lb_target_group.dashboard_green.name
+        name = var.dashboard_green_target_group_name
       }
     }
   }

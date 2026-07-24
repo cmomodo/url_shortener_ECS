@@ -7,7 +7,7 @@ The project uses **GitHub Actions** for automation. All workflows target the
 | -------- | ------------- | -------------- | ------------ |
 | Bootstrap (ECR) | `.github/workflows/bootstrap.yml` | `rollout` | Apply on push/manual |
 | Main infra (Terraform) | `.github/workflows/ci.yml` | `rollout` | Apply on push/manual |
-| Build images | `.github/workflows/docker.yml` | `rollout` | Push 3 images to ECR; also triggerable manually |
+| Build images | `.github/workflows/docker.yml` | `rollout` | After CI succeeds; push 3 images to ECR; also triggerable manually |
 | Deploy services | `.github/workflows/deploy.yml` | `rollout` | Registers task definitions and triggers CodeDeploy |
 
 ---
@@ -56,7 +56,7 @@ as data sources.
 
 | Trigger | Condition | What happens |
 | ------- | --------- | ------------ |
-| Push to `rollout` | Only `infra-ecr/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
+| Push to `rollout` | Only `infra/ecr-chicken/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
 | Pull request to `rollout` | Same path filter | plan only |
 | Manual (`workflow_dispatch`) | Always | choose `plan` or `apply` |
 

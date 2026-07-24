@@ -34,39 +34,39 @@ output "codedeploy_deployment_group_names" {
 
 # --- IAM role ARNs ---
 output "ecs_task_execution_role_arn" {
-  value       = aws_iam_role.ecs_task_execution_role.arn
+  value       = module.iam.ecs_task_execution_role_arn
   description = "ECS task execution role ARN."
 }
 
 output "api_task_role_arn" {
-  value       = aws_iam_role.api_task_role.arn
+  value       = module.iam.api_task_role_arn
   description = "API task role ARN."
 }
 
 output "worker_task_role_arn" {
-  value       = aws_iam_role.worker_task_role.arn
+  value       = module.iam.worker_task_role_arn
   description = "Worker task role ARN."
 }
 
 # --- SSM parameter ARNs ---
 output "database_url_parameter_arn" {
-  value       = aws_ssm_parameter.database_url.arn
+  value       = module.ssm.database_url_parameter_arn
   description = "SSM parameter ARN for DATABASE_URL."
 }
 
 output "sqs_queue_url_parameter_arn" {
-  value       = aws_ssm_parameter.sqs_queue_url.arn
+  value       = module.ssm.sqs_queue_url_parameter_arn
   description = "SSM parameter ARN for SQS_QUEUE_URL."
 }
 
 output "redis_url_parameter_arn" {
-  value       = aws_ssm_parameter.redis_url.arn
+  value       = module.ssm.redis_url_parameter_arn
   description = "SSM parameter ARN for REDIS_URL."
 }
 
 # --- CloudWatch log group ---
 output "api_log_group" {
-  value       = aws_cloudwatch_log_group.api.name
+  value       = module.iam.api_log_group_name
   description = "CloudWatch log group name for the API container."
 }
 

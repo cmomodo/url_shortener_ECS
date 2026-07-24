@@ -1,17 +1,17 @@
 # Remote state bucket. The S3 backend is configured at init time (e.g. via
 # `terraform init -backend-config=...`), not in a tracked file in this stack.
-# The bucket itself is created outside this stack; this file only attaches
+# The bucket itself is created outside this stack; this module only attaches
 # least-privilege access controls via a bucket policy.
 
 data "aws_s3_bucket" "terraform_state" {
-  bucket = var.terraform_state_bucket_name
+  bucket = var.bucket_name
 }
 
 locals {
   terraform_state_bucket_arn         = data.aws_s3_bucket.terraform_state.arn
   terraform_state_bucket_objects_arn = "${local.terraform_state_bucket_arn}/*"
 
-  terraform_state_enforce_allowlist = var.terraform_state_enforce_allowlist && length(var.terraform_state_access_role_arns) > 0
+  terraform_state_enforce_allowlist = var.enforce_allowlist && length(var.access_role_arns) > 0
 }
 
 data "aws_iam_policy_document" "terraform_state_bucket" {
@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "terraform_state_bucket" {
   }
 
   dynamic "statement" {
-    for_each = length(var.terraform_state_access_role_arns) > 0 ? [1] : []
+    for_each = length(var.access_role_arns) > 0 ? [1] : []
 
     content {
       sid    = "AllowTerraformStateAccess"
@@ -44,7 +44,7 @@ data "aws_iam_policy_document" "terraform_state_bucket" {
 
       principals {
         type        = "AWS"
-        identifiers = var.terraform_state_access_role_arns
+        identifiers = var.access_role_arns
       }
 
       actions = [
@@ -77,7 +77,7 @@ data "aws_iam_policy_document" "terraform_state_bucket" {
       condition {
         test     = "ArnNotLike"
         variable = "aws:PrincipalArn"
-        values   = var.terraform_state_access_role_arns
+        values   = var.access_role_arns
       }
     }
   }

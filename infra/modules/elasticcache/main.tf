@@ -1,3 +1,14 @@
+# ElastiCache auth_token has no write-only attribute; kept sensitive in state.
+# AWS ElastiCache AUTH token constraints:
+#   - 16–128 printable ASCII characters
+#   - Allowed special characters: ! & # $ ^ < > -
+#   - Disallowed: / " @ and any special chars not in the allowed list above
+resource "random_password" "redis_auth" {
+  length           = 32
+  special          = true
+  override_special = "!&#$^<>-"
+}
+
 resource "aws_elasticache_parameter_group" "url_shortener" {
   name   = "url-shortener-redis7"
   family = "redis7"
@@ -29,7 +40,7 @@ resource "aws_elasticache_replication_group" "url_shortener" {
   transit_encryption_enabled = true
   transit_encryption_mode    = "required"
 
-  auth_token                 = var.auth_token
+  auth_token                 = random_password.redis_auth.result
   auth_token_update_strategy = "SET"
 
   snapshot_retention_limit = 1

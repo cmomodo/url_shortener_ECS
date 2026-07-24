@@ -1,136 +1,26 @@
-#cloudwatch log groups
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
-data "aws_iam_policy_document" "kms_key_policy" {
-  statement {
-    sid    = "EnableRootPermissions"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-
-    actions   = ["kms:*"]
-    resources = ["*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:PrincipalAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
-
-  statement {
-    sid    = "AllowCloudWatchLogs"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["logs.${data.aws_region.current.region}.amazonaws.com"]
-    }
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey"
-    ]
-
-    resources = ["*"]
-
-    condition {
-      test     = "ArnLike"
-      variable = "kms:EncryptionContext:aws:logs:arn"
-      values   = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:*"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
-
-  statement {
-    sid    = "AllowSQS"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["sqs.amazonaws.com"]
-    }
-
-    actions = [
-      "kms:Decrypt",
-      "kms:GenerateDataKey",
-      "kms:DescribeKey"
-    ]
-
-    resources = ["*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
-
-  statement {
-    sid    = "AllowRDS"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["rds.amazonaws.com"]
-    }
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey"
-    ]
-
-    resources = ["*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "kms:ViaService"
-      values   = ["rds.${data.aws_region.current.region}.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
-}
-
+#cloudwatch log groups
 resource "aws_cloudwatch_log_group" "api" {
   #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/api"
   retention_in_days = 30
-  kms_key_id        = aws_kms_key.app.arn
+  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_cloudwatch_log_group" "dashboard" {
   #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/dashboard"
   retention_in_days = 30
-  kms_key_id        = aws_kms_key.app.arn
+  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_cloudwatch_log_group" "worker" {
   #checkov:skip=CKV_AWS_338: Testing environment — 30-day retention is sufficient, 1-year retention adds unnecessary cost
   name              = "/ecs/worker"
   retention_in_days = 30
-  kms_key_id        = aws_kms_key.app.arn
+  kms_key_id        = var.kms_key_arn
 }
 
 #iam role
@@ -180,7 +70,7 @@ resource "aws_iam_role_policy" "ecs_ssm_policy" {
         ]
         Resource = [
           data.aws_kms_key.ssm.arn,
-          aws_kms_key.app.arn
+          var.kms_key_arn
         ]
       }
     ]
@@ -215,7 +105,7 @@ resource "aws_iam_role_policy" "api_task_sqs_policy" {
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl"
         ]
-        Resource = aws_sqs_queue.terraform_queue.arn
+        Resource = var.sqs_queue_arn
       },
       {
         Effect = "Allow"
@@ -225,7 +115,7 @@ resource "aws_iam_role_policy" "api_task_sqs_policy" {
           "kms:GenerateDataKey",
           "kms:DescribeKey"
         ]
-        Resource = aws_kms_key.app.arn
+        Resource = var.kms_key_arn
       }
     ]
   })
@@ -261,7 +151,7 @@ resource "aws_iam_role_policy" "worker_task_sqs_policy" {
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl"
         ]
-        Resource = aws_sqs_queue.terraform_queue.arn
+        Resource = var.sqs_queue_arn
       },
       {
         Effect = "Allow"
@@ -269,7 +159,7 @@ resource "aws_iam_role_policy" "worker_task_sqs_policy" {
           "kms:Decrypt",
           "kms:DescribeKey"
         ]
-        Resource = aws_kms_key.app.arn
+        Resource = var.kms_key_arn
       }
     ]
   })
@@ -393,5 +283,3 @@ resource "aws_iam_policy" "deployer" {
     ]
   })
 }
-
-

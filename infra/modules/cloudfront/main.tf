@@ -26,6 +26,11 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
     domain_name = var.domain_name
     origin_id   = "alb-origin"
 
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = var.origin_verify_secret
+    }
+
     custom_origin_config {
       http_port              = 80
       https_port             = 443
@@ -44,7 +49,7 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
 
   default_cache_behavior {
     target_origin_id           = "alb-origin"
-    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods             = ["GET", "HEAD"]
     viewer_protocol_policy     = "redirect-to-https"
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
@@ -212,10 +217,253 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     }
   }
 
+  rule {
+    name     = "AWSManagedRulesAmazonIpReputationList"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesAmazonIpReputationList"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesAnonymousIpList"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAnonymousIpList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesAnonymousIpList"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "RateLimitShorten"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit                 = var.shorten_rate_limit
+        aggregate_key_type    = "IP"
+        evaluation_window_sec = 300
+
+        scope_down_statement {
+          and_statement {
+            statement {
+              byte_match_statement {
+                positional_constraint = "EXACTLY"
+                search_string         = "/shorten"
+
+                field_to_match {
+                  uri_path {}
+                }
+
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+
+            statement {
+              byte_match_statement {
+                positional_constraint = "EXACTLY"
+                search_string         = "POST"
+
+                field_to_match {
+                  method {}
+                }
+
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitShorten"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "BlockUnsupportedMethods"
+    priority = 4
+
+    action {
+      block {}
+    }
+
+    statement {
+      not_statement {
+        statement {
+          or_statement {
+            dynamic "statement" {
+              for_each = toset(["GET", "HEAD", "OPTIONS", "POST"])
+
+              content {
+                byte_match_statement {
+                  positional_constraint = "EXACTLY"
+                  search_string         = statement.value
+
+                  field_to_match {
+                    method {}
+                  }
+
+                  text_transformation {
+                    priority = 0
+                    type     = "NONE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockUnsupportedMethods"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "BlockInvalidShortenRequests"
+    priority = 5
+
+    action {
+      block {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          byte_match_statement {
+            positional_constraint = "EXACTLY"
+            search_string         = "/shorten"
+
+            field_to_match {
+              uri_path {}
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+
+        statement {
+          or_statement {
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    positional_constraint = "EXACTLY"
+                    search_string         = "POST"
+
+                    field_to_match {
+                      method {}
+                    }
+
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    positional_constraint = "STARTS_WITH"
+                    search_string         = "application/json"
+
+                    field_to_match {
+                      single_header {
+                        name = "content-type"
+                      }
+                    }
+
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+              }
+            }
+
+            statement {
+              size_constraint_statement {
+                comparison_operator = "GT"
+                size                = 4096
+
+                field_to_match {
+                  body {}
+                }
+
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockInvalidShortenRequests"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Blocks Log4Shell (CVE-2021-44228) and other known-bad inputs — fixes CKV_AWS_192 / CKV2_AWS_47
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 1
+    priority = 6
 
     override_action {
       none {}
@@ -238,7 +486,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   # General web exploit protection (SQLi, XSS, etc.) — fixes CKV_AWS_175
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 2
+    priority = 7
 
     override_action {
       none {}
@@ -254,6 +502,28 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesSQLiRuleSet"
+    priority = 8
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesSQLiRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesSQLiRuleSet"
       sampled_requests_enabled   = true
     }
   }

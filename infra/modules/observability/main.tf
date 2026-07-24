@@ -1,3 +1,8 @@
+# ALB access logs, regional WAF for the ALB, and WAF logging via Kinesis Firehose.
+
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 resource "aws_s3_bucket" "alb_logs" {
   bucket        = "url-shortener-alb-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = false
@@ -181,6 +186,43 @@ resource "aws_wafv2_web_acl" "alb" {
   }
 
   rule {
+    name     = "RequireCloudFrontOriginHeader"
+    priority = 0
+
+    action {
+      block {}
+    }
+
+    statement {
+      not_statement {
+        statement {
+          byte_match_statement {
+            positional_constraint = "EXACTLY"
+            search_string         = var.cloudfront_origin_verify_secret
+
+            field_to_match {
+              single_header {
+                name = "x-origin-verify"
+              }
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "url-shortener-waf-origin-header"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
 
@@ -198,7 +240,7 @@ resource "aws_wafv2_web_acl" "alb" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "url-shortener-waf-common"
-      sampled_requests_enabled   = true
+      sampled_requests_enabled   = false
     }
   }
 
@@ -220,12 +262,12 @@ resource "aws_wafv2_web_acl" "alb" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "url-shortener-waf-bad-inputs"
-      sampled_requests_enabled   = true
+      sampled_requests_enabled   = false
     }
   }
 
   rule {
-    name     = "AWSManagedRulesAnonymousIpList"
+    name     = "AWSManagedRulesSQLiRuleSet"
     priority = 3
 
     override_action {
@@ -234,28 +276,28 @@ resource "aws_wafv2_web_acl" "alb" {
 
     statement {
       managed_rule_group_statement {
-        name        = "AWSManagedRulesAnonymousIpList"
+        name        = "AWSManagedRulesSQLiRuleSet"
         vendor_name = "AWS"
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "url-shortener-waf-anonymous-ip"
-      sampled_requests_enabled   = true
+      metric_name                = "url-shortener-waf-sqli"
+      sampled_requests_enabled   = false
     }
   }
 
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "url-shortener-waf"
-    sampled_requests_enabled   = true
+    sampled_requests_enabled   = false
   }
 }
 
 # Enable WAF logging for the ALB (required by CKV2_AWS_31). WAF logs must go to Kinesis Firehose.
 resource "aws_wafv2_web_acl_association" "alb" {
-  resource_arn = module.ecs.alb_arn
+  resource_arn = var.alb_arn
   web_acl_arn  = aws_wafv2_web_acl.alb.arn
 }
 
@@ -310,7 +352,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.app.arn
+      kms_master_key_id = var.kms_key_arn
     }
   }
 }
@@ -378,7 +420,7 @@ resource "aws_iam_role_policy" "firehose_waf_logs" {
           "kms:GenerateDataKey",
           "kms:DescribeKey"
         ]
-        Resource = aws_kms_key.app.arn
+        Resource = var.kms_key_arn
       },
       {
         Effect = "Allow"
@@ -399,7 +441,7 @@ resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
   server_side_encryption {
     enabled  = true
     key_type = "CUSTOMER_MANAGED_CMK"
-    key_arn  = aws_kms_key.app.arn
+    key_arn  = var.kms_key_arn
   }
 
   extended_s3_configuration {
@@ -413,4 +455,10 @@ resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
 resource "aws_wafv2_web_acl_logging_configuration" "alb" {
   resource_arn            = aws_wafv2_web_acl.alb.arn
   log_destination_configs = [aws_kinesis_firehose_delivery_stream.waf_logs.arn]
+
+  redacted_fields {
+    single_header {
+      name = "x-origin-verify"
+    }
+  }
 }

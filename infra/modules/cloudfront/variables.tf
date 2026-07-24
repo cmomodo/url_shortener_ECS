@@ -15,6 +15,18 @@ variable "domain_name" {
 # WAF rate limit (requests per 5-minute window per client IP)
 variable "waf_rate_limit" {
   type        = number
-  description = "Max requests per client IP in a 5-minute window before WAF blocks (minimum 100)"
+  description = "Max requests per client IP in a 5-minute window before WAF blocks"
   default     = 2000
+}
+
+variable "shorten_rate_limit" {
+  type        = number
+  description = "Max POST /shorten requests per client IP in a 5-minute window"
+  default     = 50
+}
+
+variable "origin_verify_secret" {
+  type        = string
+  description = "Secret header value CloudFront adds to requests sent to the ALB"
+  sensitive   = true
 }

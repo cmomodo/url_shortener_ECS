@@ -17,6 +17,12 @@ permissions:
   contents: read
   id-token: write
 
+# CodeDeploy accepts only one active deployment per deployment group. Queue a
+# newer release until every service in the current release has finished.
+concurrency:
+  group: deploy-services
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Blue/green deploy ${{ matrix.service }}

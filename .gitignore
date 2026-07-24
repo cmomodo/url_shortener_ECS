@@ -25,6 +25,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+.tflint.hcl
 
 #ignore generated files
 generated-diagrams
@@ -37,3 +38,8 @@ role.json
 
 #ignore .antigravitycli
 .antigravitycli/
+
+#ignore local images
+images/linkpulse-architecture.png
+images/portfolio-cover.png
+

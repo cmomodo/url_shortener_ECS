@@ -22,13 +22,13 @@ on:
   push:
     branches: [rollout]
     paths:
-      - "infra-ecr/**"
+      - "infra/ecr-chicken/**"
       - "modules/ecr/**"
       - ".github/workflows/bootstrap.yml"
   pull_request:
     branches: [rollout]
     paths:
-      - "infra-ecr/**"
+      - "infra/ecr-chicken/**"
       - "modules/ecr/**"
       - ".github/workflows/bootstrap.yml"
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: infra-ecr
+        working-directory: infra/ecr-chicken
     steps:
       - uses: actions/checkout@v4
 
@@ -113,8 +113,8 @@ jobs:
         with:
           name: bootstrap-terraform-plan-${{ github.run_id }}
           path: |
-            infra-ecr/tfplan
-            infra-ecr/tfplan.txt
+            infra/ecr-chicken/tfplan
+            infra/ecr-chicken/tfplan.txt
           retention-days: 14
 
       - name: Upload Terraform plan artifact (before apply)
@@ -123,8 +123,8 @@ jobs:
         with:
           name: bootstrap-terraform-apply-plan-${{ github.run_id }}
           path: |
-            infra-ecr/tfplan
-            infra-ecr/tfplan.txt
+            infra/ecr-chicken/tfplan
+            infra/ecr-chicken/tfplan.txt
           retention-days: 14
 
       - name: Terraform apply

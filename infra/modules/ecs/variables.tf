@@ -1,21 +1,6 @@
-variable "vpc_id" {
-  type        = string
-  description = "VPC ID for ECS target groups."
-}
-
-variable "public_subnet_ids" {
-  type        = list(string)
-  description = "Public subnet IDs for the ALB."
-}
-
 variable "private_subnet_ids" {
   type        = list(string)
   description = "Private subnet IDs for ECS tasks."
-}
-
-variable "alb_security_group_id" {
-  type        = string
-  description = "Security group ID for the ALB."
 }
 
 variable "api_security_group_id" {
@@ -33,14 +18,49 @@ variable "worker_security_group_id" {
   description = "Security group ID for the worker ECS tasks."
 }
 
-variable "alb_logs_bucket_id" {
+variable "api_target_group_arn" {
   type        = string
-  description = "S3 bucket ID for ALB access logs."
+  description = "ARN of the API blue target group."
 }
 
-variable "certificate_arn" {
+variable "dashboard_target_group_arn" {
   type        = string
-  description = "ACM certificate ARN for the HTTPS listener."
+  description = "ARN of the dashboard blue target group."
+}
+
+variable "api_target_group_name" {
+  type        = string
+  description = "Name of the API blue target group."
+}
+
+variable "api_green_target_group_name" {
+  type        = string
+  description = "Name of the API green target group."
+}
+
+variable "dashboard_target_group_name" {
+  type        = string
+  description = "Name of the dashboard blue target group."
+}
+
+variable "dashboard_green_target_group_name" {
+  type        = string
+  description = "Name of the dashboard green target group."
+}
+
+variable "https_listener_arn" {
+  type        = string
+  description = "ARN of the HTTPS production listener."
+}
+
+variable "api_test_listener_arn" {
+  type        = string
+  description = "ARN of the API test traffic listener."
+}
+
+variable "dashboard_test_listener_arn" {
+  type        = string
+  description = "ARN of the dashboard test traffic listener."
 }
 
 variable "ecs_task_execution_role_arn" {

@@ -1,19 +1,3 @@
-output "alb_dns" {
-  value       = aws_lb.main.dns_name
-  description = "ALB DNS name."
-  sensitive   = true
-}
-
-output "alb_arn" {
-  value       = aws_lb.main.arn
-  description = "ARN of the application load balancer."
-}
-
-output "alb_zone_id" {
-  value       = aws_lb.main.zone_id
-  description = "Route 53 hosted zone ID of the application load balancer."
-}
-
 output "cluster_name" {
   value       = aws_ecs_cluster.main_cluster.name
   description = "ECS cluster name."
