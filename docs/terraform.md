@@ -17,10 +17,11 @@ To pass the latest Checkov policies, the Terraform was updated to:
 - **ALB deletion protection**: `aws_lb.main.enable_deletion_protection = false` — intentionally disabled for easier teardown in this environment (in `infra/ecs.tf`)
 - **CloudWatch log group retention**: log groups now retain logs for **365 days** (in `infra/iam.tf`)
 - **RDS snapshot tag copying**: `aws_db_instance.url_shortener.copy_tags_to_snapshot = true` (in `infra/database.tf`)
-- **S3 hardening for ALB logs** (in `infra/gateway_endpoint.tf`):
+- **S3 hardening for ALB logs** (in `infra/modules/observability/main.tf`):
   - **versioning enabled**
   - **default encryption using SSE-S3** (`AES256`) because ALB access log delivery cannot write to KMS-encrypted destination buckets
-  - **bucket lifecycle policy** (expires objects after 90 days)
+  - **bucket lifecycle policy** (expires current objects after 90 days; it does not make immediate bucket deletion safe)
+  - **Terraform destroy protection** (`prevent_destroy = true`) on the primary ALB logs bucket
   - **abort incomplete multipart uploads** after 7 days
   - **EventBridge notifications** enabled
   - **server access logging enabled** (ALB logs bucket logs to a separate access-logs bucket)
@@ -73,14 +74,20 @@ terraform destroy
 
 After you recreate with `terraform apply`, you can set it back to `true`.
 
-### More resources exist now (so destroy removes more things)
+### The ALB logs bucket is retained
 
-Because of Checkov-related changes, `terraform destroy` will also delete:
+The primary ALB logs bucket is a persistent audit record and has both
+`force_destroy = false` and `prevent_destroy = true`. Terraform therefore
+rejects a plan that would delete it while its resource block remains in the
+selected configuration. The CI apply workflow also examines its saved plan and
+stops before apply when the bucket has a `delete` action, including during an
+incorrect Terraform address migration.
 
-- **Extra S3 buckets**: access-logs bucket and WAF logs bucket
-- **Kinesis Firehose + IAM role/policy** for WAF logging
-
-Note that `force_destroy = false` on the ALB logs bucket — you will need to empty it manually before `terraform destroy` can remove it.
+A full `terraform destroy` will fail at the planning stage while this bucket
+remains in the main state. Do not work around the protection with
+`terraform state rm`: that would leave an unmanaged bucket. To destroy the
+application stack while retaining its logs, first move the persistent logging
+resources to a separate Terraform root and state.
 
 ### KMS key note
 

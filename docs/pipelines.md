@@ -106,9 +106,25 @@ CloudFront, Route 53, SQS, Redis, and supporting resources.
 | ------- | --------- | ------------ |
 | Push to `rollout` | Any file change | plan -> apply -> idempotency check |
 | Pull request to `rollout` | Any change | plan only |
-| Manual (`workflow_dispatch`) | Always | choose `plan` or `apply` |
+| Manual (`workflow_dispatch`) | Any branch for `plan`; `rollout` only for `apply` | choose `plan` or `apply` |
 
 State key: `TF_STATE_KEY` (expected `url-shortener-infra/terraform.tfstate`).
+
+Before an apply, the workflow inspects the saved plan and rejects any delete or
+replacement of the `alb_logs` S3 bucket. The bucket also has Terraform
+`prevent_destroy` protection. These two controls make a destructive plan fail
+before Terraform changes AWS.
+
+`prevent_destroy` only applies while the protected resource block is present
+in the selected revision. The plan inspection is therefore also required: it
+catches a module-to-root address regression where Terraform treats the
+configured bucket as a different resource.
+
+The protection is intentionally strict: a full `terraform destroy` fails at
+the planning stage while the ALB log bucket remains managed by the main state.
+If the rest of the stack must be destroyable while retaining the bucket, move
+the persistent logging resources into a separate Terraform root and state
+rather than removing the protection or deleting the bucket from state.
 
 ---
 

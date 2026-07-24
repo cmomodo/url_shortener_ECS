@@ -69,6 +69,14 @@ jobs:
           test -n "$TF_IN_AUTOMATION" || { echo "TF_IN_AUTOMATION repository variable is required"; exit 1; }
           test -n "$AWS_TERRAFORM_ROLE_ARN" || { echo "AWS_TERRAFORM_ROLE_ARN secret is required"; exit 1; }
 
+      - name: Restrict Terraform applies to rollout
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply')
+        run: |
+          if [ "$GITHUB_REF_NAME" != "rollout" ]; then
+            echo "::error::Terraform apply is restricted to the rollout branch. Run a plan on this branch, or merge it into rollout before applying."
+            exit 1
+          fi
+
       - name: Check formatting
         run: terraform fmt -check -recursive
 
@@ -115,6 +123,25 @@ jobs:
       - name: Save Terraform apply plan text
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply')
         run: terraform show -no-color tfplan > tfplan.txt
+
+      - name: Guard protected ALB log bucket
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply')
+        run: |
+          terraform show -json tfplan > tfplan.json
+          protected_deletions="$(
+            jq -r '
+              .resource_changes[]?
+              | select(.type == "aws_s3_bucket" and .name == "alb_logs")
+              | select(.change.actions | index("delete"))
+              | .address
+            ' tfplan.json
+          )"
+
+          if [ -n "$protected_deletions" ]; then
+            echo "::error::Refusing to apply a plan that deletes the protected ALB log bucket:"
+            echo "$protected_deletions"
+            exit 1
+          fi
 
       - name: Upload Terraform apply plan artifact
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply')

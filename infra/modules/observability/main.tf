@@ -7,6 +7,12 @@ resource "aws_s3_bucket" "alb_logs" {
   bucket        = "url-shortener-alb-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = false
 
+  # This bucket is the durable audit record for ALB traffic. Terraform must
+  # never remove it as part of an application-stack change or destroy.
+  lifecycle {
+    prevent_destroy = true
+  }
+
   #checkov:skip=CKV_AWS_144: Cross-region replication not required for this project (single-region, rebuildable logs)
   #checkov:skip=CKV_AWS_145: ALB access log delivery requires S3-managed encryption, not KMS
 }
