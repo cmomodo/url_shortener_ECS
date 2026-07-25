@@ -16,9 +16,9 @@ name: CI
 
 on:
   push:
-    branches: [rollout]
+    branches: [modules]
   pull_request:
-    branches: [rollout]
+    branches: [modules]
   workflow_dispatch:
     inputs:
       terraform_action:
@@ -69,11 +69,11 @@ jobs:
           test -n "$TF_IN_AUTOMATION" || { echo "TF_IN_AUTOMATION repository variable is required"; exit 1; }
           test -n "$AWS_TERRAFORM_ROLE_ARN" || { echo "AWS_TERRAFORM_ROLE_ARN secret is required"; exit 1; }
 
-      - name: Restrict Terraform applies to rollout
+      - name: Restrict Terraform applies to modules
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply')
         run: |
-          if [ "$GITHUB_REF_NAME" != "rollout" ]; then
-            echo "::error::Terraform apply is restricted to the rollout branch. Run a plan on this branch, or merge it into rollout before applying."
+          if [ "$GITHUB_REF_NAME" != "modules" ]; then
+            echo "::error::Terraform apply is restricted to the modules branch. Run a plan on this branch, or merge it into modules before applying."
             exit 1
           fi
 

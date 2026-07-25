@@ -20,13 +20,13 @@ name: Bootstrap (ECR)
 
 on:
   push:
-    branches: [rollout]
+    branches: [modules]
     paths:
       - "infra/ecr-chicken/**"
       - "modules/ecr/**"
       - ".github/workflows/bootstrap.yml"
   pull_request:
-    branches: [rollout]
+    branches: [modules]
     paths:
       - "infra/ecr-chicken/**"
       - "modules/ecr/**"

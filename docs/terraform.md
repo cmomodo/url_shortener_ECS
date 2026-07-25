@@ -10,8 +10,8 @@ terraform init
 terraform apply
 ```
 
-Run the main stack only from the `rollout` revision (or from a commit known to
-have the same module layout as `rollout`). The remote state records Terraform
+Run the main stack only from the `modules` revision (or from a commit known to
+have the same module layout as `modules`). The remote state records Terraform
 resource addresses, so running an older flat configuration against newer
 module-based state can produce a plan that destroys module resources and then
 tries to recreate the same AWS names.

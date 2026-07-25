@@ -1,14 +1,14 @@
 ## CI/CD Overview
 
 The project uses **GitHub Actions** for automation. All workflows target the
-`rollout` branch while we test CodeDeploy blue/green deployments.
+`modules` branch while we test CodeDeploy blue/green deployments.
 
 | Pipeline | Workflow file | Tracked branch | Mutates AWS? |
 | -------- | ------------- | -------------- | ------------ |
-| Bootstrap (ECR) | `.github/workflows/bootstrap.yml` | `rollout` | Apply on push/manual |
-| Main infra (Terraform) | `.github/workflows/ci.yml` | `rollout` | Apply on push/manual |
-| Build images | `.github/workflows/docker.yml` | `rollout` | After CI succeeds; push 3 images to ECR; also triggerable manually |
-| Deploy services | `.github/workflows/deploy.yml` | `rollout` | Registers task definitions and triggers CodeDeploy |
+| Bootstrap (ECR) | `.github/workflows/bootstrap.yml` | `modules` | Apply on push/manual |
+| Main infra (Terraform) | `.github/workflows/ci.yml` | `modules` | Apply on push/manual |
+| Build images | `.github/workflows/docker.yml` | `modules` | After CI succeeds; push 3 images to ECR; also triggerable manually |
+| Deploy services | `.github/workflows/deploy.yml` | `modules` | Registers task definitions and triggers CodeDeploy |
 
 ---
 
@@ -87,8 +87,8 @@ as data sources.
 
 | Trigger | Condition | What happens |
 | ------- | --------- | ------------ |
-| Push to `rollout` | Only `infra/ecr-chicken/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
-| Pull request to `rollout` | Same path filter | plan only |
+| Push to `modules` | Only `infra/ecr-chicken/**`, `modules/ecr/**`, `.github/workflows/bootstrap.yml` | plan -> apply -> idempotency check |
+| Pull request to `modules` | Same path filter | plan only |
 | Manual (`workflow_dispatch`) | Always | choose `plan` or `apply` |
 
 State key: `TF_BOOTSTRAP_STATE_KEY` (expected `url-shortener-ecr/terraform.tfstate`).
@@ -104,9 +104,9 @@ CloudFront, Route 53, SQS, Redis, and supporting resources.
 
 | Trigger | Condition | What happens |
 | ------- | --------- | ------------ |
-| Push to `rollout` | Any file change | plan -> apply -> idempotency check |
-| Pull request to `rollout` | Any change | plan only |
-| Manual (`workflow_dispatch`) | Any branch for `plan`; `rollout` only for `apply` | choose `plan` or `apply` |
+| Push to `modules` | Any file change | plan -> apply -> idempotency check |
+| Pull request to `modules` | Any change | plan only |
+| Manual (`workflow_dispatch`) | Any branch for `plan`; `modules` only for `apply` | choose `plan` or `apply` |
 
 State key: `TF_STATE_KEY` (expected `url-shortener-infra/terraform.tfstate`).
 
@@ -137,7 +137,7 @@ with CodeDeploy blue/green deployments.
 
 Workflow: `.github/workflows/docker.yml`
 
-Triggered automatically when the CI workflow completes successfully on `rollout`,
+Triggered automatically when the CI workflow completes successfully on `modules`,
 or **manually** via `workflow_dispatch` (Actions → Build and Push Docker Images
 → Run workflow).
 
@@ -161,7 +161,7 @@ When triggered via `workflow_dispatch` the SHA is taken from `github.sha`
 
 Workflow: `.github/workflows/deploy.yml`
 
-Triggered when `docker.yml` completes successfully on `rollout`. It can also be
+Triggered when `docker.yml` completes successfully on `modules`. It can also be
 run manually with a specific image tag.
 
 The deploy job runs as a matrix for `api`, `dashboard`, and `worker`:
@@ -179,7 +179,7 @@ The deploy job runs as a matrix for `api`, `dashboard`, and `worker`:
 ### Blue/Green Flow
 
 ```text
-GitHub push to rollout
+GitHub push to modules
     |
     +-- ci.yml      Terraform plan + apply
           |
@@ -191,6 +191,10 @@ GitHub push to rollout
                       +-- dashboard CodeDeploy blue/green
                       +-- worker ECS rolling update
 ```
+
+`workflow_run` workflows (`docker.yml`, `deploy.yml`) are loaded from the
+repository default branch (`main`). Keep their `branches` filters in sync on
+`main` so automatic chaining still fires for `modules` pushes.
 
 Each CodeDeploy-backed service has:
 
@@ -206,7 +210,7 @@ registering a new task definition.
 For automatic deployments, the deploy workflow resolves the immutable image
 tag in ECR by the triggering Docker workflow run ID. GitHub loads
 `workflow_run` workflow definitions from the repository's default branch, so
-the deploy run's own `head_sha` can describe `main` rather than the `rollout`
+the deploy run's own `head_sha` can describe `main` rather than the `modules`
 commit that CI built. Using the build run ID avoids deploying a nonexistent or
 incorrect SHA-derived tag.
 
