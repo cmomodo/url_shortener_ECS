@@ -1,3 +1,20 @@
+resource "terraform_data" "dashboard_target_group_pair" {
+  # A CodeDeploy service cannot update its load balancer through ECS
+  # UpdateService. Recreate the service if either member of its blue/green
+  # target-group pair is replaced.
+  triggers_replace = [
+    var.dashboard_target_group_arn,
+    var.dashboard_green_target_group_arn,
+  ]
+}
+
+resource "terraform_data" "api_target_group_pair" {
+  triggers_replace = [
+    var.api_target_group_arn,
+    var.api_green_target_group_arn,
+  ]
+}
+
 resource "aws_ecs_task_definition" "dashboard" {
   family                   = "dashboard"
   requires_compatibilities = ["FARGATE"]
@@ -75,9 +92,12 @@ resource "aws_ecs_service" "dashboard" {
     container_port   = 8081
   }
 
-  # CodeDeploy owns the active task definition and target group after create.
+  # CodeDeploy owns the active task definition and target group within the
+  # configured pair. If the pair itself is replaced, the ECS service must also
+  # be replaced so it no longer references a deleted target group.
   lifecycle {
-    ignore_changes = [task_definition, load_balancer, desired_count]
+    ignore_changes       = [task_definition, load_balancer, desired_count]
+    replace_triggered_by = [terraform_data.dashboard_target_group_pair]
   }
 }
 
@@ -177,9 +197,12 @@ resource "aws_ecs_service" "api" {
     container_port   = 8080
   }
 
-  # CodeDeploy owns the active task definition and target group after create.
+  # CodeDeploy owns the active task definition and target group within the
+  # configured pair. If the pair itself is replaced, the ECS service must also
+  # be replaced so it no longer references a deleted target group.
   lifecycle {
-    ignore_changes = [task_definition, load_balancer, desired_count]
+    ignore_changes       = [task_definition, load_balancer, desired_count]
+    replace_triggered_by = [terraform_data.api_target_group_pair]
   }
 }
 

@@ -23,9 +23,19 @@ variable "api_target_group_arn" {
   description = "ARN of the API blue target group."
 }
 
+variable "api_green_target_group_arn" {
+  type        = string
+  description = "ARN of the API green target group."
+}
+
 variable "dashboard_target_group_arn" {
   type        = string
   description = "ARN of the dashboard blue target group."
+}
+
+variable "dashboard_green_target_group_arn" {
+  type        = string
+  description = "ARN of the dashboard green target group."
 }
 
 variable "api_target_group_name" {

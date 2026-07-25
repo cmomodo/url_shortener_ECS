@@ -203,6 +203,19 @@ The worker does not receive user traffic, so it uses the default ECS deployment
 controller and the deploy workflow updates the worker service directly after
 registering a new task definition.
 
+For automatic deployments, the deploy workflow resolves the immutable image
+tag in ECR by the triggering Docker workflow run ID. GitHub loads
+`workflow_run` workflow definitions from the repository's default branch, so
+the deploy run's own `head_sha` can describe `main` rather than the `rollout`
+commit that CI built. Using the build run ID avoids deploying a nonexistent or
+incorrect SHA-derived tag.
+
+The API and dashboard ECS services are recreated when either target group in
+their blue/green pair is replaced. CodeDeploy may switch a service between the
+two configured groups during normal releases, so Terraform ignores that
+within-pair change; it must not retain a reference to a deleted pair after an
+ALB recovery.
+
 ---
 
 ## Environment Variables And Secrets

@@ -19,9 +19,19 @@ output "api_target_group_arn" {
   description = "ARN of the API blue target group."
 }
 
+output "api_green_target_group_arn" {
+  value       = aws_lb_target_group.api_green.arn
+  description = "ARN of the API green target group."
+}
+
 output "dashboard_target_group_arn" {
   value       = aws_lb_target_group.dashboard.arn
   description = "ARN of the dashboard blue target group."
+}
+
+output "dashboard_green_target_group_arn" {
+  value       = aws_lb_target_group.dashboard_green.arn
+  description = "ARN of the dashboard green target group."
 }
 
 output "api_target_group_name" {

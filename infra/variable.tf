@@ -55,13 +55,13 @@ variable "public_accessible" {
 variable "worker_image_tag" {
   type        = string
   description = "Immutable ECR tag for the worker image"
-  default     = "worker-sqs-auth-fix-20260329"
+  default     = "97c5a89-30134209961"
 }
 
 variable "api_image_tag" {
   type        = string
   description = "Immutable ECR tag for the API image"
-  default     = "api-sqs-event-fix-20260329"
+  default     = "97c5a89-30134209961"
 }
 
 #hosted zone id
@@ -92,5 +92,5 @@ variable "terraform_state_enforce_allowlist" {
 variable "dashboard_image_tag" {
   type        = string
   description = "Immutable ECR tag for the dashboard image."
-  default     = "latest"
+  default     = "97c5a89-30134209961"
 }

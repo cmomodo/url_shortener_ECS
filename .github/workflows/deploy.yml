@@ -57,9 +57,24 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "image_tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           else
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            RUN_ID="${{ github.event.workflow_run.id }}"
-            echo "image_tag=${SHA::7}-${RUN_ID}" >> "$GITHUB_OUTPUT"
+            # A workflow_run workflow is loaded from the default branch, so its
+            # head SHA is not necessarily the application SHA built upstream.
+            # The Docker workflow includes its own run ID in every immutable
+            # image tag; resolve that exact tag from ECR instead.
+            BUILD_RUN_ID="${{ github.event.workflow_run.id }}"
+            IMAGE_TAG="$(
+              aws ecr describe-images \
+                --repository-name "url-shortener/${{ matrix.service }}" \
+                --query "imageDetails[?imageTags!=null].imageTags[] | [?ends_with(@, '-${BUILD_RUN_ID}')]" \
+                --output text
+            )"
+
+            if [ -z "$IMAGE_TAG" ] || [[ "$IMAGE_TAG" == *$'\t'* ]]; then
+              echo "::error::Expected exactly one image tag ending in -${BUILD_RUN_ID} for ${{ matrix.service }}, found: ${IMAGE_TAG:-none}"
+              exit 1
+            fi
+
+            echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Resolve ECR registry

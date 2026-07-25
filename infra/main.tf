@@ -107,7 +107,9 @@ module "ecs" {
   dashboard_security_group_id       = module.vpc.dashboard_tasks_security_group_id
   worker_security_group_id          = module.vpc.worker_tasks_security_group_id
   api_target_group_arn              = module.alb.api_target_group_arn
+  api_green_target_group_arn        = module.alb.api_green_target_group_arn
   dashboard_target_group_arn        = module.alb.dashboard_target_group_arn
+  dashboard_green_target_group_arn  = module.alb.dashboard_green_target_group_arn
   api_target_group_name             = module.alb.api_target_group_name
   api_green_target_group_name       = module.alb.api_green_target_group_name
   dashboard_target_group_name       = module.alb.dashboard_target_group_name

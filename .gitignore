@@ -43,3 +43,5 @@ role.json
 images/linkpulse-architecture.png
 images/portfolio-cover.png
 
+#ignore tfplan
+*.tfplan
